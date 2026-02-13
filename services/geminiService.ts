@@ -244,17 +244,26 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
   const fallbackModel = "gemini-flash-lite-latest";
   
   const prompt = `
-    Act as a specialized career coach for the niche field of: "${newRole}".
+    Act as a senior career strategist and technical mentor for the specific role of: "${newRole}".
     
-    The user is a student (Status: ${data.education}, Year: ${data.currentYear}) looking to specifically break into this role.
+    CONTEXT:
+    The user is a student/fresher (Education: ${data.education}, Year: ${data.currentYear}) who specifically wants to pivot into or master "${newRole}".
     
-    GENERATE A HIGHLY TAILORED, GRANULAR 2-YEAR ROADMAP:
+    YOUR MISSION:
+    Generate a HYPER-SPECIFIC, BATTLE-TESTED 2-year roadmap. Do not provide generic advice.
     
-    1. **Learning Path (Be Specific)**: Do not just say "Learn Python". List specific tools, libraries, and frameworks that are industry standard for "${newRole}" in 2025. (e.g., "Master Pytorch & HuggingFace" instead of "AI").
-    2. **Projects (Portfolio-Grade)**: Suggest 2-3 specific project ideas that show mastery of these niche skills. Explain what problem they solve.
-    3. **Experience Strategy**: What specific kind of internships or contributions (Open Source/Freelance) matter most for "${newRole}"?
-    4. **Niche Networking**: Where do experts in this specific field hang out? (e.g. specific Subreddits, Discords, Conferences, or following specific people).
-    5. **Milestones**: Concrete goals for Month 3, Month 6, Year 1, and Year 2.
+    STRICT GUIDELINES FOR NICHE ADVICE:
+    1. **NO GENERIC FLUFF**: Never say "Learn Python" or "Networking". Say "Master Python AsyncIO and FastAPI" or "Join the 'PyData' Discord".
+    2. **EXACT TECH STACK**: List the specific libraries, frameworks, and tools used in 2025 for "${newRole}".
+    3. **REAL-WORLD PROJECTS**: Suggest projects that solve actual industry problems (e.g., "Build a distributed rate limiter with Redis" instead of "ToDo App").
+    4. **INSIDER KNOWLEDGE**: Mention specific certifications, newsletters, or thought leaders relevant to this exact niche.
+
+    OUTPUT SECTIONS:
+    1. **Learning Path**: Month-by-month granular breakdown of what to learn.
+    2. **Projects**: 2-3 portfolio-grade project ideas with technical complexity.
+    3. **Experience Strategy**: How to get the first gig (Open Source repos to contribute to, Freelance platforms, etc).
+    4. **Niche Networking**: Where the top 1% of "${newRole}" professionals hang out.
+    5. **Milestones**: Clear checkpoints for 3, 6, 12, and 24 months.
     
     Return JSON with fields: learning, projects, internships, networking, milestones.
   `;
