@@ -65,6 +65,23 @@ const analysisSchema = {
   },
 };
 
+const profileImportSchema = {
+  type: Type.OBJECT,
+  properties: {
+    fullName: { type: Type.STRING },
+    email: { type: Type.STRING },
+    phone: { type: Type.STRING },
+    linkedinGithub: { type: Type.STRING },
+    careerObjective: { type: Type.STRING },
+    education: { type: Type.STRING },
+    skills: { type: Type.STRING },
+    projects: { type: Type.STRING },
+    internships: { type: Type.STRING },
+    certifications: { type: Type.STRING },
+    interests: { type: Type.STRING },
+  }
+};
+
 const extractJson = (text: string): string => {
   const startIndex = text.indexOf('{');
   const endIndex = text.lastIndexOf('}');
@@ -145,6 +162,45 @@ const generateWithFallback = async (
             return response;
         }
         throw error;
+    }
+};
+
+export const parseProfileData = async (text: string): Promise<Partial<UserInput>> => {
+    const systemInstruction = `
+      You are a data extraction assistant.
+      Extract relevant career profile information from the provided unstructured text (which could be a resume paste or LinkedIn profile dump).
+      
+      Map the data to the following fields:
+      - fullName
+      - email
+      - phone
+      - linkedinGithub (URLs found)
+      - careerObjective (Summary/About section)
+      - education (University, Degree, Year)
+      - skills (Comma separated list)
+      - projects (Title + Description)
+      - internships (Work Experience)
+      - certifications
+      - interests
+
+      Return a JSON object. If a field is not found, leave it as an empty string.
+    `;
+
+    const config = {
+      responseMimeType: "application/json",
+      responseSchema: profileImportSchema,
+      systemInstruction: systemInstruction,
+      temperature: 0.1, // Low temp for extraction accuracy
+    };
+
+    try {
+      // Using Flash is sufficient for extraction
+      const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", text, config);
+      const jsonText = extractJson(response.text || "{}");
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error("Profile Parsing Failed:", error);
+      throw new Error("Could not extract data from text.");
     }
 };
 
@@ -240,9 +296,9 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
 };
 
 export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, useThinkingModel: boolean = false): Promise<JobToolkit['careerRoadmap']> => {
-  // Using Flash instead of Pro to prevent 429 Quota errors during demos
-  const primaryModel = "gemini-3-flash-preview";
-  const fallbackModel = "gemini-flash-lite-latest";
+  // Use 'gemini-3-pro-preview' for deep thinking, fallback to flash
+  const primaryModel = useThinkingModel ? "gemini-3-pro-preview" : "gemini-3-flash-preview";
+  const fallbackModel = "gemini-3-flash-preview";
   
   const systemInstruction = `
     Act as a senior career strategist and technical mentor.
@@ -283,9 +339,10 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
       ]
   };
 
-  // Thinking config is available on 3-flash-preview
   if (useThinkingModel) {
-      config.thinkingConfig = { thinkingBudget: 4096 }; 
+      // Use max budget for Gemini 3 Pro
+      config.thinkingConfig = { thinkingBudget: 32768 }; 
+      // Do not set maxOutputTokens when using thinking budget
   } else {
       config.temperature = 0.4;
   }

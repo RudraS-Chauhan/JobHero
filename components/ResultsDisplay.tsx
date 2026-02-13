@@ -50,8 +50,8 @@ const Tooltip = ({ text, children, position = 'top' }: { text: string; children?
 );
 
 const SuccessModal = () => (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-100 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300" role="alertdialog" aria-modal="true" aria-labelledby="success-title">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-100 animate-in zoom-in-95 duration-300 relative overflow-hidden">
             {/* Confetti Background Effect */}
             <div className="absolute inset-0 pointer-events-none">
                  <div className="absolute top-0 left-1/4 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
@@ -59,14 +59,14 @@ const SuccessModal = () => (
                  <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-green-400 rounded-full animate-ping delay-200"></div>
             </div>
 
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
-                <svg className="w-10 h-10 text-green-600 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+                <svg className="w-10 h-10 text-green-600 dark:text-green-400 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
                 </svg>
             </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-2 relative z-10">You're In! 🚀</h2>
-            <p className="text-slate-600 mb-6 relative z-10">Elite features have been successfully unlocked. Enjoy your superpowers!</p>
-            <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+            <h2 id="success-title" className="text-2xl font-black text-slate-900 dark:text-white mb-2 relative z-10">You're In! 🚀</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-6 relative z-10">Elite features have been successfully unlocked. Enjoy your superpowers!</p>
+            <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1 overflow-hidden">
                 <div className="bg-gradient-to-r from-green-400 to-green-600 h-full rounded-full animate-progress-shrink w-full origin-left"></div>
             </div>
         </div>
@@ -98,7 +98,8 @@ const ActionButtons: React.FC<{
                      <Tooltip text="Get Shareable Link" position="bottom">
                         <button 
                             onClick={onShare} 
-                            className="bg-white hover:bg-blue-50 text-blue-600 p-2 rounded-lg transition-colors border border-blue-200 shadow-sm"
+                            className="bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 p-2 rounded-lg transition-colors border border-blue-200 dark:border-blue-800 shadow-sm"
+                            aria-label="Share"
                         >
                             <ShareIcon className="h-5 w-5" />
                         </button>
@@ -108,7 +109,8 @@ const ActionButtons: React.FC<{
                     <Tooltip text="Download as PDF" position="bottom">
                         <button 
                             onClick={onDownloadPDF} 
-                            className="bg-white hover:bg-slate-50 text-slate-600 p-2 rounded-lg transition-colors border border-slate-200 shadow-sm"
+                            className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 p-2 rounded-lg transition-colors border border-slate-200 dark:border-slate-600 shadow-sm"
+                            aria-label="Download PDF"
                         >
                             <DownloadIcon className="h-5 w-5" />
                         </button>
@@ -117,7 +119,8 @@ const ActionButtons: React.FC<{
                 <Tooltip text="Copy to Clipboard" position="bottom">
                     <button 
                         onClick={handleCopy} 
-                        className="bg-white hover:bg-slate-50 text-slate-600 p-2 rounded-lg transition-colors border border-slate-200 shadow-sm"
+                        className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 p-2 rounded-lg transition-colors border border-slate-200 dark:border-slate-600 shadow-sm"
+                        aria-label="Copy to Clipboard"
                     >
                         {copied ? <CheckIcon className="h-5 w-5 text-green-500" /> : <CopyIcon className="h-5 w-5" />}
                     </button>
@@ -128,7 +131,7 @@ const ActionButtons: React.FC<{
 };
 
 const ProUpsellCard: React.FC<{ description: string; onUnlock: () => void }> = ({ description, onUnlock }) => (
-    <div className="mt-10 bg-slate-900 text-white rounded-xl p-6 relative overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all border border-slate-700" onClick={onUnlock}>
+    <div className="mt-10 bg-slate-900 dark:bg-slate-950 text-white rounded-xl p-6 relative overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all border border-slate-700" onClick={onUnlock}>
         {/* Shine Effect */}
         <div className="absolute top-0 -left-full w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:animate-[shine_1s_ease-in-out]"></div>
         
@@ -534,18 +537,18 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   };
 
   const TemplateSelect = (
-      <div className="flex items-center bg-white rounded-lg border border-slate-200 px-2 py-1 shadow-sm">
-           <span className="text-xs font-semibold text-slate-500 mr-2 hidden sm:inline">TEMPLATE:</span>
+      <div className="flex items-center bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 px-2 py-1 shadow-sm">
+           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-2 hidden sm:inline">TEMPLATE:</span>
            <select 
               value={selectedTemplate}
               onChange={(e) => setSelectedTemplate(e.target.value as TemplateType)}
-              className="text-xs sm:text-sm border-none focus:ring-0 text-slate-700 font-medium bg-transparent cursor-pointer outline-none"
+              className="text-xs sm:text-sm border-none focus:ring-0 text-slate-700 dark:text-slate-200 font-medium bg-transparent cursor-pointer outline-none"
            >
-               <option value="Classic">Classic</option>
-               <option value="Modern">Modern</option>
-               <option value="Creative">Creative</option>
-               <option value="Elegant">Elegant {isProMember ? '' : '👑'}</option>
-               <option value="Executive">Executive {isProMember ? '' : '👑'}</option>
+               <option value="Classic" className="dark:bg-slate-800">Classic</option>
+               <option value="Modern" className="dark:bg-slate-800">Modern</option>
+               <option value="Creative" className="dark:bg-slate-800">Creative</option>
+               <option value="Elegant" className="dark:bg-slate-800">Elegant {isProMember ? '' : '👑'}</option>
+               <option value="Executive" className="dark:bg-slate-800">Executive {isProMember ? '' : '👑'}</option>
            </select>
       </div>
   );
@@ -554,15 +557,19 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
     <div className="max-w-5xl mx-auto">
       {showSuccessModal && <SuccessModal />}
       <div className="flex flex-col sm:flex-row justify-between items-end gap-4 mb-0 px-4 sm:px-0">
-        <div className="flex space-x-1 overflow-x-auto no-scrollbar w-full sm:w-auto">
+        <div className="flex space-x-1 overflow-x-auto no-scrollbar w-full sm:w-auto" role="tablist" aria-label="Result Tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              id={`tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-5 py-3 rounded-t-lg font-medium text-sm transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-white text-blue-600 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-x border-transparent'
-                  : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-x border-transparent dark:border-slate-700'
+                  : 'bg-slate-200 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -573,14 +580,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         
         <div className="flex gap-2">
             {isProMember && (
-                <span className="px-3 py-2 bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-full shadow-sm flex items-center gap-1 animate-pulse">
+                <span className="px-3 py-2 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50 text-xs font-bold rounded-full shadow-sm flex items-center gap-1 animate-pulse">
                     <span>👑</span> ELITE MEMBER
                 </span>
             )}
             <Tooltip text="Clear all inputs and start over" position="top">
                 <button
                     onClick={onReset}
-                    className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-slate-500 hover:text-red-500 transition-colors bg-white rounded-lg shadow-sm border border-slate-200"
+                    className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
                 >
                     <RefreshIcon className="h-4 w-4" />
                     <span>Start Over</span>
@@ -589,7 +596,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         </div>
       </div>
 
-      <div className="relative bg-white p-6 sm:p-8 rounded-b-xl rounded-tr-xl rounded-tl-none shadow-lg mt-0 min-h-[500px]">
+      <div 
+        className="relative bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-b-xl rounded-tr-xl rounded-tl-none shadow-lg mt-0 min-h-[500px] transition-colors duration-300"
+        role="tabpanel"
+        id={`panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+      >
         {activeTab === 'resume' && (
             <>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -603,14 +615,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                 
                 {/* Pro AI Scanner Feature */}
                 {isProMember ? (
-                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+                    <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 relative z-10">
                             <div>
-                                <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
+                                <h3 className="font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
                                     <span className="text-2xl">🤖</span> Deep AI Resume Audit
                                 </h3>
-                                <p className="text-sm text-slate-500">Target Role: <span className="font-semibold text-blue-600">{userInput.jobRoleTarget}</span></p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Target Role: <span className="font-semibold text-blue-600 dark:text-blue-400">{userInput.jobRoleTarget}</span></p>
                             </div>
                             <button 
                                 onClick={handleAnalyzeResume} 
@@ -629,14 +641,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                         {resumeAnalysis && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
                                 {/* Score & Prediction */}
-                                <div className="p-5 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between gap-4">
+                                <div className="p-5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-between gap-4">
                                      <div className="text-center">
-                                         <div className="text-5xl font-black text-blue-600 mb-1">{resumeAnalysis.score}</div>
+                                         <div className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-1">{resumeAnalysis.score}</div>
                                          <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">ATS Score</div>
                                      </div>
-                                     <div className="h-12 w-px bg-slate-100"></div>
+                                     <div className="h-12 w-px bg-slate-100 dark:bg-slate-700"></div>
                                      <div className="text-center">
-                                         <div className={`text-2xl font-bold mb-1 ${(resumeAnalysis.jobFitPrediction || 'Medium') === 'High' ? 'text-green-600' : ((resumeAnalysis.jobFitPrediction || 'Medium') === 'Medium' ? 'text-amber-500' : 'text-red-500')}`}>
+                                         <div className={`text-2xl font-bold mb-1 ${(resumeAnalysis.jobFitPrediction || 'Medium') === 'High' ? 'text-green-600 dark:text-green-400' : ((resumeAnalysis.jobFitPrediction || 'Medium') === 'Medium' ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400')}`}>
                                              {resumeAnalysis.jobFitPrediction || 'Medium'}
                                          </div>
                                          <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Interview Chance</div>
@@ -644,26 +656,26 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                 </div>
 
                                 {/* Missing Keywords */}
-                                <div className="p-5 bg-red-50 rounded-xl border border-red-100">
-                                    <h4 className="font-bold text-red-900 text-sm mb-2 flex items-center gap-2">
+                                <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
+                                    <h4 className="font-bold text-red-900 dark:text-red-300 text-sm mb-2 flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                         Critical Missing Keywords
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
                                         {resumeAnalysis.missingKeywords?.map((k, i) => (
-                                            <span key={i} className="px-2 py-1 bg-white border border-red-200 text-red-700 text-xs rounded-md font-medium shadow-sm">
+                                            <span key={i} className="px-2 py-1 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs rounded-md font-medium shadow-sm">
                                                 {k}
                                             </span>
-                                        )) || <span className="text-xs text-red-500">Analysis pending...</span>}
+                                        )) || <span className="text-xs text-red-500 dark:text-red-400">Analysis pending...</span>}
                                     </div>
                                 </div>
 
                                 {/* Strengths */}
-                                <div className="p-5 bg-green-50 rounded-xl border border-green-100">
-                                    <h4 className="font-bold text-green-900 text-sm mb-2">✅ Top Strengths</h4>
+                                <div className="p-5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-900/30">
+                                    <h4 className="font-bold text-green-900 dark:text-green-300 text-sm mb-2">✅ Top Strengths</h4>
                                     <ul className="space-y-2">
                                         {resumeAnalysis.strengths.map((s, i) => (
-                                            <li key={i} className="text-xs text-green-800 flex items-start gap-2">
+                                            <li key={i} className="text-xs text-green-800 dark:text-green-300 flex items-start gap-2">
                                                 <span className="mt-0.5">•</span> {s}
                                             </li>
                                         ))}
@@ -671,11 +683,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                 </div>
 
                                 {/* Improvements */}
-                                <div className="p-5 bg-amber-50 rounded-xl border border-amber-100">
-                                    <h4 className="font-bold text-amber-900 text-sm mb-2">🔧 Action Plan</h4>
+                                <div className="p-5 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                                    <h4 className="font-bold text-amber-900 dark:text-amber-300 text-sm mb-2">🔧 Action Plan</h4>
                                     <ul className="space-y-2">
                                         {resumeAnalysis.improvements.map((s, i) => (
-                                            <li key={i} className="text-xs text-amber-800 flex items-start gap-2">
+                                            <li key={i} className="text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
                                                 <span className="mt-0.5">•</span> {s}
                                             </li>
                                         ))}
@@ -684,15 +696,15 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                             </div>
                         )}
                         {!resumeAnalysis && !isAnalyzing && (
-                            <p className="text-sm text-slate-500 italic mt-2">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-2">
                                 * Click "Run Deep Audit" to detect missing keywords (e.g., Docker, SQL) and get a hiring probability score.
                             </p>
                         )}
                     </div>
                 ) : null}
 
-                {/* VISUAL RESUME RENDERER */}
-                <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-100/50 p-1 sm:p-4 shadow-inner">
+                {/* VISUAL RESUME RENDERER - Always looks like paper */}
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-100/50 dark:bg-slate-900/50 p-1 sm:p-4 shadow-inner">
                      <ResumePreview 
                         text={toolkit.resume} 
                         template={selectedTemplate} 
@@ -717,7 +729,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     onDownloadPDF={() => handleDownloadPDF('coverLetter')}
                     templateSelector={TemplateSelect}
                 />
-                <div className="prose max-w-none whitespace-pre-wrap leading-relaxed text-slate-700 pt-8 sm:pt-0">{toolkit.coverLetter}</div>
+                <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300 pt-8 sm:pt-0">{toolkit.coverLetter}</div>
                 {!isProMember && (
                     <ProUpsellCard 
                         description="Download your personalized cover letter with premium matching templates." 
@@ -727,17 +739,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             </>
         )}
         {activeTab === 'linkedin' && (
-          <div className="prose max-w-none space-y-6 relative">
+          <div className="prose dark:prose-invert max-w-none space-y-6 relative">
             <ActionButtons textToCopy={contentToCopy(activeTab)} />
             <div>
-              <h3 className="font-bold text-lg">🔗 LinkedIn Headline</h3>
-              <p className="bg-slate-100 p-4 rounded-md italic">"{toolkit.linkedin.headline}"</p>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">🔗 LinkedIn Headline</h3>
+              <p className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-md italic text-slate-800 dark:text-slate-200">"{toolkit.linkedin.headline}"</p>
             </div>
             <div>
-              <h3 className="font-bold text-lg">👤 About Me Bio</h3>
-              <p className="whitespace-pre-wrap text-slate-700">{toolkit.linkedin.bio}</p>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">👤 About Me Bio</h3>
+              <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{toolkit.linkedin.bio}</p>
             </div>
-             <p className="text-sm text-slate-500 pt-4 border-t">{toolkit.linkedin.bio.split(" ").pop()}</p>
+             <p className="text-sm text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-700">{toolkit.linkedin.bio.split(" ").pop()}</p>
              {!isProMember && (
                 <ProUpsellCard 
                     description="Auto-optimize your full LinkedIn profile with SEO keyword analysis." 
@@ -747,18 +759,18 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           </div>
         )}
         {activeTab === 'interview' && (
-          <div className="prose max-w-none relative">
+          <div className="prose dark:prose-invert max-w-none relative">
             <ActionButtons textToCopy={contentToCopy(activeTab)} />
-            <p className="text-slate-600">{toolkit.mockInterview.intro}</p>
+            <p className="text-slate-600 dark:text-slate-300">{toolkit.mockInterview.intro}</p>
             <div className="space-y-6 mt-6">
               {toolkit.mockInterview.questions.map((item, index) => (
-                <div key={index} className="p-4 border border-slate-200 rounded-lg">
-                  <p className="font-semibold text-slate-800">🎤 Question {index + 1}: {item.question}</p>
-                  <p className="mt-2 text-sm text-slate-600 bg-green-50/50 p-2 rounded-md">💡 **Feedback:** {item.feedback}</p>
+                <div key={index} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">🎤 Question {index + 1}: {item.question}</p>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 bg-green-50/50 dark:bg-green-900/20 p-2 rounded-md">💡 **Feedback:** {item.feedback}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-8 font-semibold text-slate-800 p-4 bg-blue-50 rounded-lg">{toolkit.mockInterview.outro}</p>
+            <p className="mt-8 font-semibold text-slate-800 dark:text-slate-200 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">{toolkit.mockInterview.outro}</p>
             {!isProMember && (
                 <ProUpsellCard 
                     description="Practice with a real-time AI interview coach." 
@@ -769,9 +781,9 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         )}
         {activeTab === 'roadmap' && (
           <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50">
                 <form onSubmit={handleRoadmapUpdate} className="flex flex-col gap-3">
-                    <label htmlFor="newRole" className="block text-sm font-semibold text-blue-900">
+                    <label htmlFor="newRole" className="block text-sm font-semibold text-blue-900 dark:text-blue-300">
                         Explore a different career path?
                     </label>
                     <div className="flex flex-col sm:flex-row gap-3 items-end">
@@ -780,7 +792,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                 type="text" 
                                 id="newRole"
                                 placeholder="Enter a specific niche (e.g. 'AI Ethics Researcher', 'Rust Systems Engineer')..."
-                                className="block w-full rounded-md border-blue-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                className="block w-full rounded-md border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
                                 value={newRoleInput}
                                 onChange={(e) => setNewRoleInput(e.target.value)}
                             />
@@ -788,10 +800,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                          
                          <Tooltip text={useThinkingModel ? "Using Deep Analysis (Slower, Detailed)" : "Using Fast Response"} position="top">
                              <div className="flex items-center gap-2 mb-1 cursor-pointer" onClick={() => setUseThinkingModel(!useThinkingModel)}>
-                                <div className={`w-10 h-5 rounded-full p-1 transition-colors ${useThinkingModel ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                                <div className={`w-10 h-5 rounded-full p-1 transition-colors ${useThinkingModel ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
                                     <div className={`bg-white w-3 h-3 rounded-full shadow-md transform transition-transform ${useThinkingModel ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </div>
-                                <span className={`text-xs font-semibold ${useThinkingModel ? 'text-purple-600' : 'text-slate-500'}`}>Deep Think</span>
+                                <span className={`text-xs font-semibold ${useThinkingModel ? 'text-purple-600 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'}`}>Deep Think</span>
                              </div>
                          </Tooltip>
 
@@ -807,70 +819,70 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                 </form>
             </div>
             
-            <div className="prose max-w-none space-y-6 relative">
+            <div className="prose dark:prose-invert max-w-none space-y-6 relative text-slate-700 dark:text-slate-300">
                  <ActionButtons textToCopy={contentToCopy(activeTab)} />
                 {isRegeneratingRoadmap ? (
                     <div className="flex flex-col justify-center items-center h-48 space-y-3">
                          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                         {useThinkingModel && <p className="text-sm text-purple-600 animate-pulse font-medium">Deep Thinking in progress...</p>}
+                         {useThinkingModel && <p className="text-sm text-purple-600 dark:text-purple-400 animate-pulse font-medium">Deep Thinking in progress...</p>}
                     </div>
                 ) : (
                     <>
                         {isProMember ? (
-                             <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 mb-6">
-                                <h3 className="font-bold text-lg mb-4 text-center">🗺️ Pro Visual Roadmap</h3>
-                                <div className="relative border-l-2 border-blue-300 ml-4 space-y-8 pl-6 py-2">
+                             <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 mb-6">
+                                <h3 className="font-bold text-lg mb-4 text-center text-slate-900 dark:text-white">🗺️ Pro Visual Roadmap</h3>
+                                <div className="relative border-l-2 border-blue-300 dark:border-blue-700 ml-4 space-y-8 pl-6 py-2">
                                     <div className="relative">
-                                        <div className="absolute -left-[33px] bg-blue-500 h-4 w-4 rounded-full border-4 border-white"></div>
-                                        <h4 className="font-bold text-blue-900">Phase 1: Foundations</h4>
-                                        <p className="text-sm text-slate-600 mt-1">{toolkit.careerRoadmap.learning.slice(0, 150)}...</p>
+                                        <div className="absolute -left-[33px] bg-blue-500 h-4 w-4 rounded-full border-4 border-white dark:border-slate-800"></div>
+                                        <h4 className="font-bold text-blue-900 dark:text-blue-300">Phase 1: Foundations</h4>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{toolkit.careerRoadmap.learning.slice(0, 150)}...</p>
                                     </div>
                                     <div className="relative">
-                                        <div className="absolute -left-[33px] bg-blue-500 h-4 w-4 rounded-full border-4 border-white"></div>
-                                        <h4 className="font-bold text-blue-900">Phase 2: Projects</h4>
-                                        <p className="text-sm text-slate-600 mt-1">{toolkit.careerRoadmap.projects.slice(0, 150)}...</p>
+                                        <div className="absolute -left-[33px] bg-blue-500 h-4 w-4 rounded-full border-4 border-white dark:border-slate-800"></div>
+                                        <h4 className="font-bold text-blue-900 dark:text-blue-300">Phase 2: Projects</h4>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{toolkit.careerRoadmap.projects.slice(0, 150)}...</p>
                                     </div>
                                     <div className="relative">
-                                        <div className="absolute -left-[33px] bg-green-500 h-4 w-4 rounded-full border-4 border-white"></div>
-                                        <h4 className="font-bold text-green-900">Phase 3: Career Launch</h4>
-                                        <p className="text-sm text-slate-600 mt-1">{toolkit.careerRoadmap.milestones.slice(0, 150)}...</p>
+                                        <div className="absolute -left-[33px] bg-green-500 h-4 w-4 rounded-full border-4 border-white dark:border-slate-800"></div>
+                                        <h4 className="font-bold text-green-900 dark:text-green-300">Phase 3: Career Launch</h4>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{toolkit.careerRoadmap.milestones.slice(0, 150)}...</p>
                                     </div>
                                 </div>
                              </div>
                         ) : null}
 
                         <div>
-                        <h3 className="font-bold text-lg">🎓 Learning</h3>
-                        <p className="whitespace-pre-wrap text-slate-700">{toolkit.careerRoadmap.learning}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">🎓 Learning</h3>
+                        <p className="whitespace-pre-wrap">{toolkit.careerRoadmap.learning}</p>
                         </div>
                         <div>
-                        <h3 className="font-bold text-lg">🚀 Projects to Build</h3>
-                        <p className="whitespace-pre-wrap text-slate-700">{toolkit.careerRoadmap.projects}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">🚀 Projects to Build</h3>
+                        <p className="whitespace-pre-wrap">{toolkit.careerRoadmap.projects}</p>
                         </div>
                         <div>
-                        <h3 className="font-bold text-lg">🏢 Internships + Freelancing</h3>
-                        <p className="whitespace-pre-wrap text-slate-700">{toolkit.careerRoadmap.internships}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">🏢 Internships + Freelancing</h3>
+                        <p className="whitespace-pre-wrap">{toolkit.careerRoadmap.internships}</p>
                         </div>
                         <div>
-                        <h3 className="font-bold text-lg">🤝 Networking</h3>
-                        <p className="whitespace-pre-wrap text-slate-700">{toolkit.careerRoadmap.networking}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">🤝 Networking</h3>
+                        <p className="whitespace-pre-wrap">{toolkit.careerRoadmap.networking}</p>
                         </div>
                         <div>
-                        <h3 className="font-bold text-lg">🏆 Resume + Interview Milestones</h3>
-                        <p className="whitespace-pre-wrap text-slate-700">{toolkit.careerRoadmap.milestones}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">🏆 Resume + Interview Milestones</h3>
+                        <p className="whitespace-pre-wrap">{toolkit.careerRoadmap.milestones}</p>
                         </div>
-                        <p className="text-sm text-slate-500 pt-4 border-t">{toolkit.careerRoadmap.milestones.split(" ").pop()}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-700">{toolkit.careerRoadmap.milestones.split(" ").pop()}</p>
                         
                         {!isProMember && (
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center text-center opacity-75 grayscale hover:grayscale-0 transition-all cursor-pointer" onClick={handleRazorpayPayment}>
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-blue-600">
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 flex flex-col items-center justify-center text-center opacity-75 grayscale hover:grayscale-0 transition-all cursor-pointer" onClick={handleRazorpayPayment}>
+                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-blue-600 dark:text-blue-400">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" />
                                     </svg>
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900">Career Flowchart (Pro)</h3>
-                                <p className="text-slate-500 text-sm mb-4">Visual path representation locked</p>
-                                <button className="text-blue-600 font-semibold hover:underline">Unlock to View Flowchart</button>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Career Flowchart (Pro)</h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Visual path representation locked</p>
+                                <button className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Unlock to View Flowchart</button>
                             </div>
                         )}
                     </>

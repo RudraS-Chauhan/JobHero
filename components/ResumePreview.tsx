@@ -87,6 +87,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ text, template, is
     
     const clean = (txt: string) => txt?.replace(/➤/g, '•').trim() || "";
 
+    // IMPORTANT: Resumes are always on "white paper" even in dark mode
     let containerClass = "p-8 min-h-[800px] shadow-sm bg-white text-slate-800 text-sm leading-relaxed transition-all duration-300";
     let nameClass = "text-3xl font-bold uppercase tracking-wide";
     let contactClass = "text-sm text-slate-600 mt-1";
@@ -134,7 +135,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ text, template, is
     };
 
     return (
-        <div className="relative h-full">
+        <div className="relative h-full" role="document" aria-label={`Resume Preview - ${template} Template`}>
             <div className={`${containerClass} ${isBlurred ? 'blur-md select-none overflow-hidden h-[600px]' : 'h-full'}`}>
                 <div className={`mb-6 ${template === 'Modern' || template === 'Elegant' ? "text-center" : ""}`}>
                      <div className={nameClass}>{userInput.fullName || 'Your Name'}</div>
@@ -156,7 +157,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ text, template, is
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-sm rounded-lg">
                     <div className="bg-slate-900 p-8 rounded-2xl shadow-2xl text-center max-w-sm border border-slate-700 text-white">
                         <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
-                            <span className="text-2xl">🔒</span>
+                            <span className="text-2xl" aria-hidden="true">🔒</span>
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Elite Template Locked</h3>
                         <p className="text-slate-400 mb-6 text-sm">

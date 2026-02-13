@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserInput } from '../types';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
+import { parseProfileData } from '../services/geminiService';
 
 interface InputFormProps {
   onSubmit: (data: UserInput) => void;
@@ -17,19 +18,20 @@ const InputField: React.FC<{
     autoFocus?: boolean;
 }> = ({ id, label, placeholder, value, onChange, required = false, autoFocus = false }) => (
   <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-    <label htmlFor={id} className="block text-sm font-semibold text-slate-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
+    <label htmlFor={id} className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+      {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
     </label>
     <input
       type="text"
       name={id}
       id={id}
       autoFocus={autoFocus}
-      className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all hover:border-blue-300"
+      className="block w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all hover:border-blue-300 dark:hover:border-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-600"
       placeholder={placeholder}
       value={value}
       onChange={onChange}
       required={required}
+      aria-required={required}
     />
   </div>
 );
@@ -45,20 +47,21 @@ const TextareaField: React.FC<{
     helpText?: string; 
 }> = ({ id, label, placeholder, value, onChange, rows = 3, required = false, helpText }) => (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <label htmlFor={id} className="block text-sm font-semibold text-slate-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label htmlFor={id} className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+        {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <textarea
         id={id}
         name={id}
         rows={rows}
-        className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all hover:border-blue-300"
+        className="block w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all hover:border-blue-300 dark:hover:border-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-600"
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         required={required}
+        aria-required={required}
       />
-      {helpText && <p className="mt-1 text-xs text-slate-500 italic">💡 {helpText}</p>}
+      {helpText && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 italic">💡 {helpText}</p>}
     </div>
 );
 
@@ -115,6 +118,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   // Persistence Effect
   useEffect(() => {
@@ -161,6 +167,29 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
   const handleMagicFill = () => {
       setFormData(MOCK_DATA);
   };
+
+  const handleImport = async () => {
+      if (!importText.trim()) return;
+      setIsImporting(true);
+      try {
+          const parsedData = await parseProfileData(importText);
+          setFormData(prev => ({
+              ...prev,
+              ...parsedData,
+              // Keep default values if parsing returned empty for specific fields
+              fullName: parsedData.fullName || prev.fullName,
+              email: parsedData.email || prev.email,
+              phone: parsedData.phone || prev.phone,
+          }));
+          setShowImportModal(false);
+          setImportText('');
+          alert("Data imported successfully! Please review the fields.");
+      } catch (e) {
+          alert("Failed to parse text. Please fill manually.");
+      } finally {
+          setIsImporting(false);
+      }
+  };
   
   const handleClearProgress = () => {
       if (confirm("Are you sure you want to clear your progress? This cannot be undone.")) {
@@ -179,9 +208,60 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
   const progressPercentage = (currentStep / STEPS.length) * 100;
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl max-w-3xl mx-auto overflow-hidden border border-slate-100 relative">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-3xl mx-auto overflow-hidden border border-slate-100 dark:border-slate-700 relative transition-colors duration-300">
+      
+      {/* IMPORT MODAL */}
+      {showImportModal && (
+          <div 
+            className="absolute inset-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-6 w-full max-w-lg relative">
+                  <button 
+                    onClick={() => setShowImportModal(false)}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    aria-label="Close modal"
+                  >
+                      ✕
+                  </button>
+                  <h3 id="modal-title" className="text-xl font-bold text-slate-900 dark:text-white mb-2">📥 Import from Text</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Paste your entire Resume or LinkedIn Profile text (CTRL+A, CTRL+C) below. Our AI will extract the details.</p>
+                  <textarea 
+                    className="w-full h-48 p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-mono mb-4 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                    placeholder="Paste raw text here..."
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-3">
+                      <button 
+                        onClick={() => setShowImportModal(false)}
+                        className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                        onClick={handleImport}
+                        disabled={isImporting || !importText.trim()}
+                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                      >
+                          {isImporting ? <span className="animate-spin">⌛</span> : '✨'} 
+                          {isImporting ? 'Extracting...' : 'Auto-Fill Form'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Progress Bar */}
-      <div className="h-2 bg-slate-100 w-full">
+      <div 
+        className="h-2 bg-slate-100 dark:bg-slate-700 w-full"
+        role="progressbar"
+        aria-valuenow={progressPercentage}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
           <div 
             className="h-full bg-blue-600 transition-all duration-500 ease-out" 
             style={{ width: `${progressPercentage}%` }}
@@ -192,32 +272,40 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
         {/* Header Section */}
         <div className="flex justify-between items-start mb-8">
             <div>
-                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
                     <span className="text-4xl">{STEPS[currentStep - 1].icon}</span>
                     {STEPS[currentStep - 1].title}
                 </h2>
                 <div className="flex items-center gap-3 mt-2">
-                    <p className="text-slate-500 font-medium">{STEPS[currentStep - 1].description}</p>
-                    {isSaved && <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full animate-pulse">✓ Auto-saved</span>}
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">{STEPS[currentStep - 1].description}</p>
+                    {isSaved && <span className="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full animate-pulse">✓ Auto-saved</span>}
                 </div>
             </div>
             <div className="text-right hidden sm:block">
                  <div className="flex flex-col gap-2 items-end">
                     <button 
                         type="button"
-                        onClick={handleMagicFill}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                        title="Fill with dummy data for testing"
+                        onClick={() => setShowImportModal(true)}
+                        className="text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-4 py-1.5 rounded-full transition-all shadow-md hover:shadow-lg flex items-center gap-1"
                     >
-                        ✨ Magic Fill
+                        📥 Import Resume/LinkedIn
                     </button>
-                    <button
-                        type="button"
-                        onClick={handleClearProgress}
-                        className="text-xs text-slate-400 hover:text-red-500 hover:underline transition-colors"
-                    >
-                        Clear Progress
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            type="button"
+                            onClick={handleMagicFill}
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                            ✨ Magic Fill
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleClearProgress}
+                            className="text-xs text-slate-400 hover:text-red-500 hover:underline transition-colors"
+                        >
+                            Clear
+                        </button>
+                    </div>
                  </div>
                 <div className="text-xs text-slate-400 mt-2 font-mono">Step {currentStep} of {STEPS.length}</div>
             </div>
@@ -263,8 +351,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           {/* STEP 4: TARGET */}
           {currentStep === 4 && (
               <div className="space-y-6">
-                  <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 space-y-4">
-                        <h3 className="font-bold text-blue-900 text-sm uppercase tracking-wide">Dream Job Details</h3>
+                  <div className="bg-blue-50/50 dark:bg-blue-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-900/50 space-y-4">
+                        <h3 className="font-bold text-blue-900 dark:text-blue-300 text-sm uppercase tracking-wide">Dream Job Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InputField id="jobRoleTarget" label="Target Role" placeholder="e.g., SDE, Product Manager" value={formData.jobRoleTarget} onChange={handleChange} required autoFocus />
                             <InputField id="company" label="Target Company" placeholder="e.g., Google, Startups" value={formData.company} onChange={handleChange} required />
@@ -276,23 +364,23 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           )}
 
           {/* Footer / Navigation */}
-          <div className="pt-6 border-t border-slate-100 flex justify-between items-center mt-8">
+          <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center mt-8">
             
             {/* Mobile Actions */}
              <div className="sm:hidden flex gap-2">
                  <button 
                     type="button"
-                    onClick={handleMagicFill}
-                    className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-full"
+                    onClick={() => setShowImportModal(true)}
+                    className="text-xs font-bold text-purple-600 bg-purple-50 dark:bg-purple-900/30 px-3 py-2 rounded-full"
                 >
-                    ✨ Fill
+                    📥 Import
                 </button>
                  <button 
                     type="button"
-                    onClick={handleClearProgress}
-                    className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-full"
+                    onClick={handleMagicFill}
+                    className="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded-full"
                 >
-                    Clear
+                    ✨ Fill
                 </button>
              </div>
 
@@ -301,7 +389,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                     <button
                         type="button"
                         onClick={handleBack}
-                        className="px-6 py-2.5 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="px-6 py-2.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     >
                         Back
                     </button>
@@ -311,7 +399,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                     <button
                         type="button"
                         onClick={handleNext}
-                        className="px-8 py-2.5 rounded-lg font-bold text-white bg-slate-900 hover:bg-black transition-all flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        className="px-8 py-2.5 rounded-lg font-bold text-white bg-slate-900 dark:bg-slate-700 hover:bg-black dark:hover:bg-slate-600 transition-all flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                         Next Step
                     </button>

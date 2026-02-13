@@ -5,6 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JobHero AI - Your Personal AI Career Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            animation: {
+              'blob': 'blob 10s infinite',
+              'progress-indeterminate': 'progress-indeterminate 1.5s infinite linear',
+            },
+            keyframes: {
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              },
+              'progress-indeterminate': {
+                '0%': { width: '0%', marginLeft: '0%' },
+                '50%': { width: '70%', marginLeft: '30%' },
+                '100%': { width: '0%', marginLeft: '100%' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <script>
+      // Initialize theme before React mounts to prevent flashing
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script type="importmap">
 {
@@ -18,7 +52,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50">
+  <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
