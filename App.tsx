@@ -4,6 +4,7 @@ import { generateJobToolkit, regenerateCareerRoadmap } from './services/geminiSe
 import InputForm from './components/InputForm';
 import ResultsDisplay from './components/ResultsDisplay';
 import { LogoIcon } from './components/icons/LogoIcon';
+import { SharedResumeView } from './components/SharedResumeView';
 
 const HeroSection = () => (
   <div className="text-center mb-16 relative z-10">
@@ -13,7 +14,7 @@ const HeroSection = () => (
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
       </span>
-      <span>Powered by <strong>Gemini 2.0 Flash</strong></span>
+      <span>Powered by <strong>Gemini 3.0 Flash</strong></span>
     </div>
 
     {/* Animated Title */}
@@ -45,7 +46,9 @@ const HeroSection = () => (
             className={`p-4 rounded-xl border ${feature.color} shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 cursor-default animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-backwards bg-white/80 backdrop-blur-sm group`}
             style={{ animationDelay: `${300 + (idx * 100)}ms` }}
           >
-              <div className="text-3xl mb-2 filter drop-shadow-sm transform transition-transform group-hover:scale-110 duration-200">{feature.icon}</div>
+              <div className="text-3xl mb-2 filter drop-shadow-sm transform transition-all duration-300 ease-out group-hover:scale-125 group-hover:-translate-y-1 group-hover:rotate-6 motion-safe:group-hover:animate-pulse">
+                {feature.icon}
+              </div>
               <div className="font-bold text-slate-900 text-sm">{feature.title}</div>
               <div className="text-xs text-slate-500 font-medium">{feature.desc}</div>
           </div>
@@ -58,7 +61,7 @@ const HowItWorks = () => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16 px-4">
       {[
           { step: "01", title: "Share Your Story", desc: "Enter your raw details, rough notes, or copy-paste your old resume.", icon: "✍️" },
-          { step: "02", title: "AI Architect", desc: "Our Gemini 2.0 engine structures, polishes, and keywords your profile.", icon: "🧠" },
+          { step: "02", title: "AI Architect", desc: "Our Gemini 3.0 engine structures, polishes, and keywords your profile.", icon: "🧠" },
           { step: "03", title: "Launch Career", desc: "Download ATS-ready PDFs, prep for interviews, and get the job.", icon: "🚀" }
       ].map((item, i) => (
           <div key={i} className="relative group bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-white/60 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
@@ -74,6 +77,14 @@ const HowItWorks = () => (
 );
 
 const App: React.FC = () => {
+  // Check for shared resume view based on URL params
+  if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('shareData')) {
+          return <SharedResumeView />;
+      }
+  }
+
   const [userInput, setUserInput] = useState<UserInput | null>(null);
   const [jobToolkit, setJobToolkit] = useState<JobToolkit | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -190,7 +201,7 @@ const App: React.FC = () => {
             <div className="w-full bg-slate-100 rounded-full h-3 mb-3 overflow-hidden shadow-inner">
                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full animate-progress-indeterminate"></div>
             </div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Powered by Google Gemini 2.0</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Powered by Google Gemini 3.0</p>
           </div>
         )}
 

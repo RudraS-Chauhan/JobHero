@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserInput } from '../types';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
 
@@ -87,13 +87,45 @@ const STEPS = [
     { id: 4, title: 'Target', icon: '🎯', description: "Where are you going?" },
 ];
 
+const STORAGE_KEY_DATA = 'jobHero_formData';
+const STORAGE_KEY_STEP = 'jobHero_currentStep';
+
 const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<UserInput>({
-    fullName: '', email: '', phone: '', linkedinGithub: '', careerObjective: '',
-    education: '', skills: '', projects: '', internships: '', certifications: '',
-    jobRoleTarget: '', company: '', whyThisRole: '', interests: '', currentYear: '',
+  // Load state from localStorage or default
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(STORAGE_KEY_STEP);
+        return saved ? parseInt(saved, 10) : 1;
+    }
+    return 1;
   });
+
+  const [formData, setFormData] = useState<UserInput>(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(STORAGE_KEY_DATA);
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    }
+    return {
+        fullName: '', email: '', phone: '', linkedinGithub: '', careerObjective: '',
+        education: '', skills: '', projects: '', internships: '', certifications: '',
+        jobRoleTarget: '', company: '', whyThisRole: '', interests: '', currentYear: '',
+    };
+  });
+
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Persistence Effect
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(formData));
+    localStorage.setItem(STORAGE_KEY_STEP, currentStep.toString());
+    
+    // Simple visual feedback trigger
+    setIsSaved(true);
+    const timer = setTimeout(() => setIsSaved(false), 2000);
+    return () => clearTimeout(timer);
+  }, [formData, currentStep]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -128,7 +160,20 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
 
   const handleMagicFill = () => {
       setFormData(MOCK_DATA);
-      // Optional: Flash visual feedback
+  };
+  
+  const handleClearProgress = () => {
+      if (confirm("Are you sure you want to clear your progress? This cannot be undone.")) {
+          const emptyData = {
+              fullName: '', email: '', phone: '', linkedinGithub: '', careerObjective: '',
+              education: '', skills: '', projects: '', internships: '', certifications: '',
+              jobRoleTarget: '', company: '', whyThisRole: '', interests: '', currentYear: '',
+          };
+          setFormData(emptyData);
+          setCurrentStep(1);
+          localStorage.removeItem(STORAGE_KEY_DATA);
+          localStorage.removeItem(STORAGE_KEY_STEP);
+      }
   };
 
   const progressPercentage = (currentStep / STEPS.length) * 100;
@@ -151,17 +196,29 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                     <span className="text-4xl">{STEPS[currentStep - 1].icon}</span>
                     {STEPS[currentStep - 1].title}
                 </h2>
-                <p className="mt-2 text-slate-500 font-medium">{STEPS[currentStep - 1].description}</p>
+                <div className="flex items-center gap-3 mt-2">
+                    <p className="text-slate-500 font-medium">{STEPS[currentStep - 1].description}</p>
+                    {isSaved && <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full animate-pulse">✓ Auto-saved</span>}
+                </div>
             </div>
             <div className="text-right hidden sm:block">
-                 <button 
-                    type="button"
-                    onClick={handleMagicFill}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                    title="Fill with dummy data for testing"
-                >
-                    ✨ Magic Fill
-                </button>
+                 <div className="flex flex-col gap-2 items-end">
+                    <button 
+                        type="button"
+                        onClick={handleMagicFill}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        title="Fill with dummy data for testing"
+                    >
+                        ✨ Magic Fill
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleClearProgress}
+                        className="text-xs text-slate-400 hover:text-red-500 hover:underline transition-colors"
+                    >
+                        Clear Progress
+                    </button>
+                 </div>
                 <div className="text-xs text-slate-400 mt-2 font-mono">Step {currentStep} of {STEPS.length}</div>
             </div>
         </div>
@@ -221,14 +278,23 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           {/* Footer / Navigation */}
           <div className="pt-6 border-t border-slate-100 flex justify-between items-center mt-8">
             
-            {/* Mobile Magic Fill (visible only on small screens) */}
-             <button 
-                type="button"
-                onClick={handleMagicFill}
-                className="sm:hidden text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-full"
-            >
-                ✨ Fill
-            </button>
+            {/* Mobile Actions */}
+             <div className="sm:hidden flex gap-2">
+                 <button 
+                    type="button"
+                    onClick={handleMagicFill}
+                    className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-full"
+                >
+                    ✨ Fill
+                </button>
+                 <button 
+                    type="button"
+                    onClick={handleClearProgress}
+                    className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-full"
+                >
+                    Clear
+                </button>
+             </div>
 
             <div className="flex gap-3 ml-auto">
                 {currentStep > 1 && (

@@ -65,65 +65,6 @@ const analysisSchema = {
   },
 };
 
-const buildPrompt = (data: UserInput): string => {
-  return `
-    You are "JobHero AI", a professional career assistant.
-    
-    **CRITICAL RULE**: You must NOT hallucinate. You must NOT add any skills, tools, or experiences that are not explicitly listed in the USER DETAILS.
-    
-    --- USER DETAILS ---
-    Full Name: ${data.fullName}
-    Email: ${data.email}
-    Phone: ${data.phone}
-    LinkedIn/GitHub: ${data.linkedinGithub}
-    Career Objective: ${data.careerObjective}
-    Education: ${data.education}
-    Skills: ${data.skills} (ONLY USE THESE. DO NOT ADD OTHERS.)
-    Projects: ${data.projects}
-    Internships: ${data.internships}
-    Certifications: ${data.certifications}
-    Job Role Target: ${data.jobRoleTarget}
-    Company: ${data.company}
-    Why this role: ${data.whyThisRole}
-    Interests: ${data.interests}
-    Current Year: ${data.currentYear}
-
-    --- GENERATION RULES ---
-
-    1.  **Resume**:
-        - Create a clean, text-based, ATS-friendly resume.
-        - **IMPORTANT FORMATTING**: You MUST use the following exact headers with icons for sections:
-          📝 SUMMARY
-          🎯 OBJECTIVE
-          🎓 EDUCATION
-          💡 SKILLS
-          🚀 PROJECTS
-          🏢 EXPERIENCE
-          📜 CERTIFICATIONS
-        - **SKILLS SECTION**: List ONLY the skills found in the "Skills" input above.
-        - **EXPERIENCE/PROJECTS**: Use only the provided details.
-        - Use "➤" for bullets.
-
-    2.  **Cover Letter**:
-        - Professional, 150-200 words.
-        - Reference ONLY the provided skills and reasons for applying.
-
-    3.  **LinkedIn**:
-        - Headline: Under 120 chars, catchy.
-        - Bio: Under 250 words, professional narrative using provided info.
-
-    4.  **Mock Interview**:
-        - 5 relevant technical/behavioral questions for the "Job Role Target".
-        - Provide feedback assuming a basic student answer.
-
-    5.  **Career Roadmap**:
-        - 2-year checklist plan (Learning, Projects, Internships, Networking, Milestones).
-        - Recommend currently popular and relevant technologies or certifications for 2025.
-
-    Return ONLY a JSON object matching the schema.
-  `;
-};
-
 const extractJson = (text: string): string => {
   const startIndex = text.indexOf('{');
   const endIndex = text.lastIndexOf('}');
@@ -192,7 +133,8 @@ const generateWithFallback = async (
             // Wait 2 seconds to let the API breathe
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // Remove thinking config for fallback if it's a lite model
+            // Remove thinking config and systemInstruction (optional, but safer for lite models) for fallback if needed.
+            // Note: Lite models might support systemInstruction, but definitely not thinkingConfig.
             const { thinkingConfig, ...fallbackConfig } = config;
             
             const response = await ai.models.generateContent({
@@ -207,7 +149,65 @@ const generateWithFallback = async (
 };
 
 export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> => {
-  const prompt = buildPrompt(data);
+  const systemInstruction = `
+    You are "JobHero AI", a professional career assistant.
+    
+    **CRITICAL RULE**: You must NOT hallucinate. You must NOT add any skills, tools, or experiences that are not explicitly listed in the USER DETAILS.
+
+    --- GENERATION RULES ---
+
+    1.  **Resume**:
+        - Create a clean, text-based, ATS-friendly resume.
+        - **IMPORTANT FORMATTING**: You MUST use the following exact headers with icons for sections:
+          📝 SUMMARY
+          🎯 OBJECTIVE
+          🎓 EDUCATION
+          💡 SKILLS
+          🚀 PROJECTS
+          🏢 EXPERIENCE
+          📜 CERTIFICATIONS
+        - **SKILLS SECTION**: List ONLY the skills found in the "Skills" input above.
+        - **EXPERIENCE/PROJECTS**: Use only the provided details.
+        - Use "➤" for bullets.
+
+    2.  **Cover Letter**:
+        - Professional, 150-200 words.
+        - Reference ONLY the provided skills and reasons for applying.
+
+    3.  **LinkedIn**:
+        - Headline: Under 120 chars, catchy.
+        - Bio: Under 250 words, professional narrative using provided info.
+
+    4.  **Mock Interview**:
+        - 5 relevant technical/behavioral questions for the "Job Role Target".
+        - Provide feedback assuming a basic student answer.
+
+    5.  **Career Roadmap**:
+        - 2-year checklist plan (Learning, Projects, Internships, Networking, Milestones).
+        - Recommend currently popular and relevant technologies or certifications for 2025.
+
+    Return ONLY a JSON object matching the schema.
+  `;
+
+  const userContent = `
+    --- USER DETAILS ---
+    Full Name: ${data.fullName}
+    Email: ${data.email}
+    Phone: ${data.phone}
+    LinkedIn/GitHub: ${data.linkedinGithub}
+    Career Objective: ${data.careerObjective}
+    Education: ${data.education}
+    Skills: ${data.skills} (ONLY USE THESE. DO NOT ADD OTHERS.)
+    Projects: ${data.projects}
+    Internships: ${data.internships}
+    Certifications: ${data.certifications}
+    Job Role Target: ${data.jobRoleTarget}
+    Company: ${data.company}
+    Why this role: ${data.whyThisRole}
+    Interests: ${data.interests}
+    Current Year: ${data.currentYear}
+  `;
+
   const primaryModel = "gemini-3-flash-preview"; // Fast, high quota
   const fallbackModel = "gemini-flash-lite-latest"; // Very fast, backup
 
@@ -215,6 +215,7 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
     responseMimeType: "application/json",
     responseSchema: responseSchema,
     temperature: 0.2,
+    systemInstruction: systemInstruction,
     safetySettings: [
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
@@ -224,7 +225,7 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
   };
   
   try {
-    const response = await generateWithFallback(primaryModel, fallbackModel, prompt, config);
+    const response = await generateWithFallback(primaryModel, fallbackModel, userContent, config);
     const jsonText = extractJson(response.text || "{}");
     return JSON.parse(jsonText) as JobToolkit;
 
@@ -243,18 +244,15 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
   const primaryModel = "gemini-3-flash-preview";
   const fallbackModel = "gemini-flash-lite-latest";
   
-  const prompt = `
-    Act as a senior career strategist and technical mentor for the specific role of: "${newRole}".
-    
-    CONTEXT:
-    The user is a student/fresher (Education: ${data.education}, Year: ${data.currentYear}) who specifically wants to pivot into or master "${newRole}".
+  const systemInstruction = `
+    Act as a senior career strategist and technical mentor.
     
     YOUR MISSION:
     Generate a HYPER-SPECIFIC, BATTLE-TESTED 2-year roadmap. Do not provide generic advice.
     
     STRICT GUIDELINES FOR NICHE ADVICE:
     1. **NO GENERIC FLUFF**: Never say "Learn Python" or "Networking". Say "Master Python AsyncIO and FastAPI" or "Join the 'PyData' Discord".
-    2. **EXACT TECH STACK**: List the specific libraries, frameworks, and tools used in 2025 for "${newRole}".
+    2. **EXACT TECH STACK**: List the specific libraries, frameworks, and tools used in 2025.
     3. **REAL-WORLD PROJECTS**: Suggest projects that solve actual industry problems (e.g., "Build a distributed rate limiter with Redis" instead of "ToDo App").
     4. **INSIDER KNOWLEDGE**: Mention specific certifications, newsletters, or thought leaders relevant to this exact niche.
 
@@ -262,15 +260,21 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
     1. **Learning Path**: Month-by-month granular breakdown of what to learn.
     2. **Projects**: 2-3 portfolio-grade project ideas with technical complexity.
     3. **Experience Strategy**: How to get the first gig (Open Source repos to contribute to, Freelance platforms, etc).
-    4. **Niche Networking**: Where the top 1% of "${newRole}" professionals hang out.
+    4. **Niche Networking**: Where the top 1% professionals hang out.
     5. **Milestones**: Clear checkpoints for 3, 6, 12, and 24 months.
     
     Return JSON with fields: learning, projects, internships, networking, milestones.
   `;
 
+  const userContent = `
+    CONTEXT:
+    The user is a student/fresher (Education: ${data.education}, Year: ${data.currentYear}) who specifically wants to pivot into or master "${newRole}".
+  `;
+
   const config: any = {
       responseMimeType: "application/json",
       responseSchema: roadmapSchema,
+      systemInstruction: systemInstruction,
       safetySettings: [
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
@@ -287,7 +291,7 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
   }
 
   try {
-    const response = await generateWithFallback(primaryModel, fallbackModel, prompt, config);
+    const response = await generateWithFallback(primaryModel, fallbackModel, userContent, config);
     const jsonText = extractJson(response.text || "{}");
     return JSON.parse(jsonText) as JobToolkit['careerRoadmap'];
   } catch (error: any) {
@@ -301,16 +305,19 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
 };
 
 export const analyzeResume = async (resumeText: string, jobRole: string): Promise<ResumeAnalysis> => {
-  const prompt = `
-    Analyze the following resume text specifically for the target job role: "${jobRole}".
-    
+  const systemInstruction = `
     Act as a strict hiring manager.
+    
     1. Provide an ATS Score (0-100).
     2. List 3 key strengths.
     3. List 3 critical improvements.
-    4. **Keyword Gap Analysis**: Identify 3-5 specific industry standard keywords/skills for "${jobRole}" that are MISSING from this resume.
+    4. **Keyword Gap Analysis**: Identify 3-5 specific industry standard keywords/skills for the target role that are MISSING from the resume.
     5. **Job Fit Prediction**: Predict if this candidate has "High", "Medium", or "Low" chances of getting an interview based purely on content relevance.
-    
+  `;
+
+  const userContent = `
+    Analyze the following resume text specifically for the target job role: "${jobRole}".
+
     Resume Text:
     ${resumeText.substring(0, 5000)}
   `;
@@ -318,11 +325,12 @@ export const analyzeResume = async (resumeText: string, jobRole: string): Promis
   const config = {
     responseMimeType: "application/json",
     responseSchema: analysisSchema,
+    systemInstruction: systemInstruction,
     temperature: 0.2,
   };
 
   try {
-    const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", prompt, config);
+    const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", userContent, config);
     const jsonText = extractJson(response.text || "{}");
     return JSON.parse(jsonText) as ResumeAnalysis;
   } catch (error) {
