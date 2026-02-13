@@ -153,20 +153,52 @@ const HowItWorks = () => (
   </div>
 );
 
-const App: React.FC = () => {
-  // Check for shared resume view based on URL params
-  if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('shareData')) {
-          return <SharedResumeView />;
-      }
-  }
+// Helper functions defined outside to prevent re-creation
+const getTroubleshootingTips = (errorMsg: string) => {
+    const msg = errorMsg.toLowerCase();
+    if (msg.includes('api key')) {
+        return "The API Key is missing or invalid. Please check your .env file or configuration.";
+    }
+    if (msg.includes('429') || msg.includes('quota')) {
+        return "The AI service is currently experiencing high traffic. Please wait 30-60 seconds and try again.";
+    }
+    if (msg.includes('503') || msg.includes('overloaded')) {
+        return "Our AI servers are currently overloaded. Please try again in a few moments.";
+    }
+    if (msg.includes('safety') || msg.includes('blocked')) {
+        return "The content was flagged by safety filters. Please try rephrasing your input to be more professional.";
+    }
+    if (msg.includes('network') || msg.includes('fetch')) {
+        return "A network error occurred. Please check your internet connection.";
+    }
+    return "Ensure your input is valid and try again. If the issue persists, contact support.";
+};
 
+const getErrorTitle = (errorMsg: string) => {
+    const msg = errorMsg.toLowerCase();
+    if (msg.includes('api key')) return "Configuration Error";
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) return "Connection Issue";
+    if (msg.includes('429') || msg.includes('quota')) return "Server Busy";
+    if (msg.includes('safety') || msg.includes('blocked')) return "Content Flagged";
+    if (msg.includes('503') || msg.includes('overloaded')) return "Service Overloaded";
+    return "Something Went Wrong";
+};
+
+const App: React.FC = () => {
   const [userInput, setUserInput] = useState<UserInput | null>(null);
   const [jobToolkit, setJobToolkit] = useState<JobToolkit | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  
+  // Lazy initialize shared view state to prevent flash of main content
+  const [isSharedView, setIsSharedView] = useState(() => {
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        return !!params.get('shareData');
+    }
+    return false;
+  });
 
   // Initialize Theme and Scroll Position
   useEffect(() => {
@@ -212,6 +244,10 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateToolkit = (updates: Partial<JobToolkit>) => {
+    setJobToolkit(prev => prev ? ({ ...prev, ...updates }) : null);
+  };
+
   const handleReset = () => {
     setUserInput(null);
     setJobToolkit(null);
@@ -248,31 +284,11 @@ const App: React.FC = () => {
     }
   };
 
-  const getTroubleshootingTips = (errorMsg: string) => {
-      const msg = errorMsg.toLowerCase();
-      if (msg.includes('429') || msg.includes('quota')) {
-          return "The AI service is currently experiencing high traffic. Please wait 30-60 seconds and try again.";
-      }
-      if (msg.includes('503') || msg.includes('overloaded')) {
-          return "Our AI servers are currently overloaded. Please try again in a few moments.";
-      }
-      if (msg.includes('safety') || msg.includes('blocked')) {
-          return "The content was flagged by safety filters. Please try rephrasing your input to be more professional.";
-      }
-      if (msg.includes('network') || msg.includes('fetch')) {
-          return "A network error occurred. Please check your internet connection.";
-      }
-      return "Ensure your input is valid and try again. If the issue persists, contact support.";
-  };
-
-  const getErrorTitle = (errorMsg: string) => {
-      const msg = errorMsg.toLowerCase();
-      if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) return "Connection Issue";
-      if (msg.includes('429') || msg.includes('quota')) return "Server Busy";
-      if (msg.includes('safety') || msg.includes('blocked')) return "Content Flagged";
-      if (msg.includes('503') || msg.includes('overloaded')) return "Service Overloaded";
-      return "Something Went Wrong";
-  };
+  // Render Shared View if Active
+  // This early return is safe because it is after all hooks are initialized
+  if (isSharedView) {
+      return <SharedResumeView />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col relative overflow-x-hidden transition-colors duration-300">
@@ -396,14 +412,12 @@ const App: React.FC = () => {
                           Retry Generation
                       </button>
                     )}
-                    {jobToolkit && (
-                       <button
-                          onClick={() => setError(null)}
-                          className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-slate-600 hover:bg-slate-700 transition-all"
-                      >
-                          Dismiss
-                      </button>
-                    )}
+                    <button
+                        onClick={() => setError(null)}
+                        className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-slate-700 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-all"
+                    >
+                        Dismiss
+                    </button>
                      <button
                         onClick={() => navigator.clipboard.writeText(error)}
                         className="inline-flex items-center px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
@@ -425,7 +439,8 @@ const App: React.FC = () => {
             toolkit={jobToolkit}
             userInput={userInput}
             onReset={handleReset} 
-            onRegenerateRoadmap={handleRegenerateRoadmap} 
+            onRegenerateRoadmap={handleRegenerateRoadmap}
+            onUpdateToolkit={handleUpdateToolkit}
           />
         )}
       </main>

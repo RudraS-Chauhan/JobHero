@@ -1,7 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserInput, JobToolkit, ResumeAnalysis } from '../types';
 
-const responseSchema = {
+// Core Schema: Essential tools for immediate display
+const coreResponseSchema = {
   type: Type.OBJECT,
   properties: {
     resume: { type: Type.STRING, description: "A clean, ATS-friendly, one-page resume text." },
@@ -13,37 +14,26 @@ const responseSchema = {
         alternativeHeadlines: { 
             type: Type.ARRAY, 
             items: { type: Type.STRING },
-            description: "5 alternative, keyword-optimized headlines (e.g. one for creative, one for analytical, one for leadership)." 
+            description: "5 alternative, keyword-optimized headlines." 
         },
         bio: { type: Type.STRING, description: "A compelling 'About Me' narrative (150-200 words)." },
       },
     },
-    coldEmail: { type: Type.STRING, description: "A short, punchy cold email to a recruiter/founder (subject + body)." },
-    salaryNegotiation: { type: Type.STRING, description: "A professional script to negotiate salary after receiving an offer." },
-    recruiterPsychology: { type: Type.STRING, description: "A paragraph explaining deep subconscious reasons why a recruiter might accept or reject this specific profile, and what 'vibe' it gives off." },
-    internshipHunter: {
-        type: Type.OBJECT,
-        properties: {
-            searchQueries: { type: Type.ARRAY, items: { type: Type.STRING }, description: "5 highly specific Boolean search strings for LinkedIn/Google to find hidden roles (e.g. site:linkedin.com 'react' AND 'intern')." },
-            platforms: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3 specific platforms or websites best suited for this role (e.g. Wellfound for startups, etc)." },
-            strategy: { type: Type.STRING, description: "One actionable 'Hack' to get noticed for this specific role." }
-        }
-    },
     mockInterview: {
       type: Type.OBJECT,
       properties: {
-        intro: { type: Type.STRING, description: "Context for the interview simulation." },
+        intro: { type: Type.STRING },
         questions: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
               question: { type: Type.STRING },
-              feedback: { type: Type.STRING, description: "Brief tip on how to answer this specific question." },
+              feedback: { type: Type.STRING },
             },
           },
         },
-        outro: { type: Type.STRING, description: "Closing encouragement." },
+        outro: { type: Type.STRING },
       },
     },
     careerRoadmap: {
@@ -52,15 +42,33 @@ const responseSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-            phase: { type: Type.STRING, description: "e.g., 'Phase 1', 'Month 1-3'" },
-            duration: { type: Type.STRING, description: "Time period required e.g., '3 Months'" },
-            title: { type: Type.STRING, description: "Main focus area e.g., 'Foundations & Core Logic'" },
-            description: { type: Type.STRING, description: "Specific actionable goals." },
-            tools: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 3-5 specific tools/tech to master." }
+            phase: { type: Type.STRING },
+            duration: { type: Type.STRING },
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            tools: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
       }
     },
   },
+};
+
+// Elite Schema: Advanced strategies generated on demand
+const eliteResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    coldEmail: { type: Type.STRING, description: "A short, punchy cold email to a recruiter/founder." },
+    salaryNegotiation: { type: Type.STRING, description: "A professional script to negotiate salary." },
+    recruiterPsychology: { type: Type.STRING, description: "Deep psychological analysis of the profile." },
+    internshipHunter: {
+        type: Type.OBJECT,
+        properties: {
+            searchQueries: { type: Type.ARRAY, items: { type: Type.STRING }, description: "5 boolean search strings." },
+            platforms: { type: Type.ARRAY, items: { type: Type.STRING } },
+            strategy: { type: Type.STRING, description: "One actionable 'Hack'." }
+        }
+    }
+  }
 };
 
 const roadmapSchema = {
@@ -109,7 +117,6 @@ const extractJson = (text: string): string => {
   const startIndex = text.indexOf('{');
   const endIndex = text.lastIndexOf('}');
   
-  // Try finding array if object not found (for roadmap regen)
   if (startIndex === -1) {
      const arrayStart = text.indexOf('[');
      const arrayEnd = text.lastIndexOf(']');
@@ -191,84 +198,30 @@ export const parseProfileData = async (text: string): Promise<Partial<UserInput>
 
 export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> => {
   const systemInstruction = `
-    You are "JobHero AI", an elite career strategist.
+    You are "JobHero AI". Generate a professional career toolkit.
     
-    **CRITICAL DATA INTEGRITY RULES**: 
-    1. **NO HALLUCINATION**: You must ONLY use the details provided in the 'User Details' section. 
-    2. **DO NOT ADD** fake certifications, internships, work experience, or skills that the user has not explicitly listed. 
-    3. If a field (e.g., Certifications, Internships, Projects) is empty, "None", or "None provided" in the input, **DO NOT CREATE A SECTION FOR IT** in the resume. 
-    4. Do not infer or guess start/end dates if not provided.
-    5. Professional formatting is non-negotiable.
-
-    --- OUTPUT REQUIREMENTS ---
-
-    1. **Resume**:
-       - Standard headers: 📝 SUMMARY, 🎯 OBJECTIVE, 🎓 EDUCATION, 💡 SKILLS, 🚀 PROJECTS (Only if provided), 🏢 EXPERIENCE (Only if provided), 📜 CERTIFICATIONS (Only if provided).
-       - Use "➤" bullets.
-       - **Strictly omit** headers for empty data sections.
-
-    2. **Cover Letter**:
-       - STRICT Business Letter Format:
-         [Date]
-         
-         [Hiring Manager Name]
-         [Hiring Manager Title]
-         [Company Name]
-         [Company Address]
-         
-         Dear [Hiring Manager Name or "Hiring Team"],
-         [Body Paragraph 1: Hook]
-         [Body Paragraph 2: Skills alignment]
-         [Body Paragraph 3: Closing]
-         
-         Sincerely,
-         [Name]
-
-    3. **LinkedIn**:
-       - Headline: Viral, high-impact, keyword-rich (e.g., "Full Stack Dev | React & Node.js | Building Scalable Apps").
-       - Provide 5 alternative headlines in 'alternativeHeadlines' array catering to different vibes (e.g., Professional, Creative, Founder-focused).
-       - Bio: First-person professional narrative. Engaging, authoritative, welcoming.
-
-    4. **Career Roadmap**:
-       - Generate a detailed, chronological flowchart array (4-6 steps) to master the role in 2025.
-       - For each step, strictly provide:
-         - **Phase**: e.g. "Phase 1"
-         - **Duration**: Specific time period (e.g. "Weeks 1-6")
-         - **Title**: Milestone name
-         - **Description**: Actionable goals
-         - **Tools**: Specific, trending modern tools (e.g. "Next.js 14", "Docker", "Supabase", "Kubernetes").
-
-    5. **Cold Email**:
-       - Subject line + Short body (max 100 words) to send to a founder/recruiter asking for an opportunity.
-
-    6. **Salary Negotiation Script**:
-       - Professional script to counter-offer a salary proposal politely but firmly.
+    **DATA INTEGRITY**: Use ONLY provided details. No hallucinations.
     
-    7. **Recruiter Psychology**:
-       - Analyze the user's profile and explain WHY a recruiter might accept or reject them. Be brutally honest but constructive. Mention specific red flags or green flags.
+    **OUTPUTS**:
+    1. **Resume**: Professional headers, bullet points (➤). Omit empty sections.
+    2. **Cover Letter**: 3-paragraph business format.
+    3. **LinkedIn**: Viral headline + 5 alternatives + Bio.
+    4. **Mock Interview**: 3 Q&A pairs + Intro/Outro.
+    5. **Career Roadmap**: 4-6 step chronological plan to master the role.
 
-    8. **Internship Hunter**:
-       - Generate 5 highly specific "Boolean Search Strings" for Google/LinkedIn jobs.
-       - Suggest 3 specific platforms (besides LinkedIn) relevant to their tech stack.
-       - One specific "Strategy/Hack" to get noticed.
-
-    Return JSON.
+    Return JSON matching the schema.
   `;
 
   const userContent = `
-    User Details:
     Name: ${data.fullName} | Role: ${data.jobRoleTarget} | Company: ${data.company}
-    Skills: ${data.skills || "None provided"} 
-    Exp: ${data.internships || "None provided"} 
-    Years of Experience: ${data.yearsOfExperience || "None provided"} 
-    Projects: ${data.projects || "None provided"}
-    Edu: ${data.education} | Bio: ${data.careerObjective}
-    Certifications: ${data.certifications || "None provided"}
+    Skills: ${data.skills} | Exp: ${data.internships} | YOE: ${data.yearsOfExperience}
+    Projects: ${data.projects} | Edu: ${data.education} | Bio: ${data.careerObjective}
+    Certs: ${data.certifications}
   `;
 
   const config = {
     responseMimeType: "application/json",
-    responseSchema: responseSchema,
+    responseSchema: coreResponseSchema,
     temperature: 0.3,
     systemInstruction: systemInstruction,
   };
@@ -281,27 +234,49 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
   }
 };
 
+export const generateEliteTools = async (data: UserInput): Promise<Partial<JobToolkit>> => {
+    const systemInstruction = `
+      You are "JobHero AI Elite". Generate advanced career strategies.
+      
+      **OUTPUTS**:
+      1. **Cold Email**: Subject + Body for a recruiter.
+      2. **Salary Negotiation**: Professional script.
+      3. **Recruiter Psychology**: Deep analysis of the profile's perception.
+      4. **Internship Hunter**: Search strings, platforms, and hacks.
+      
+      Return JSON.
+    `;
+  
+    const userContent = `Role: ${data.jobRoleTarget}. Skills: ${data.skills}. Bio: ${data.careerObjective}`;
+  
+    const config = {
+      responseMimeType: "application/json",
+      responseSchema: eliteResponseSchema,
+      temperature: 0.4,
+      systemInstruction: systemInstruction,
+    };
+    
+    try {
+      const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", userContent, config);
+      return JSON.parse(extractJson(response.text || "{}"));
+    } catch (error: any) {
+      throw new Error("Elite Tools generation failed: " + error.message);
+    }
+  };
+
 export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, useThinkingModel: boolean = false): Promise<JobToolkit['careerRoadmap']> => {
   const primaryModel = useThinkingModel ? "gemini-3-pro-preview" : "gemini-3-flash-preview";
   
   const systemInstruction = `
-    Act as a Senior Technical Career Coach.
-    Create a comprehensive, step-by-step career roadmap to become a "${newRole}" in 2025.
-    
-    Structure the response as a chronological flowchart array (4-6 steps).
-    For each step, strictly provide:
-    1. **Phase**: e.g., "Phase 1: Foundations", "Phase 2: Advanced Concepts".
-    2. **Duration**: Realistic time period (e.g., "Weeks 1-6").
-    3. **Title**: Clear milestone name.
-    4. **Description**: Actionable learning objectives.
-    5. **Tools**: A specific list of modern, trending tools/technologies to learn (e.g., "Next.js 14", "Supabase", "Tailwind").
+    Create a step-by-step career roadmap to become a "${newRole}" in 2025.
+    Return a JSON array of steps (Phase, Duration, Title, Description, Tools).
   `;
 
-  const userContent = `User Education: ${data.education}. Current Skills: ${data.skills}. Years of Experience: ${data.yearsOfExperience}. Target: ${newRole}`;
+  const userContent = `Current Skills: ${data.skills}. Target: ${newRole}`;
 
   const config: any = {
       responseMimeType: "application/json",
-      responseSchema: roadmapSchema, // Expecting Array
+      responseSchema: roadmapSchema,
       systemInstruction: systemInstruction,
   };
 
@@ -318,9 +293,8 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
 
 export const analyzeResume = async (resumeText: string, jobRole: string): Promise<ResumeAnalysis> => {
   const systemInstruction = `
-    Act as a strict ATS algorithm.
-    Analyze the resume for the role: "${jobRole}".
-    Return JSON with score, strengths, improvements, missingKeywords, jobFitPrediction.
+    Act as an ATS algorithm. Analyze the resume for: "${jobRole}".
+    Return JSON: score (0-100), strengths (array), improvements (array), missingKeywords (array), jobFitPrediction (High/Med/Low).
   `;
 
   const config = {
@@ -331,11 +305,9 @@ export const analyzeResume = async (resumeText: string, jobRole: string): Promis
   };
 
   try {
-    // Use flash-preview as it follows JSON schema better than lite
     const response = await generateWithFallback("gemini-3-flash-preview", "gemini-3-flash-preview", resumeText, config);
     return JSON.parse(extractJson(response.text || "{}")) as ResumeAnalysis;
   } catch (error) {
-    console.error("Analysis Error", error);
     throw new Error("Resume analysis failed.");
   }
 };

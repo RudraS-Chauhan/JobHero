@@ -49,10 +49,11 @@ export interface JobToolkit {
     outro: string;
   };
   careerRoadmap: RoadmapStep[];
-  coldEmail: string;
-  salaryNegotiation: string;
-  recruiterPsychology: string;
-  internshipHunter: InternshipHunter;
+  // Optional for lazy loading / performance optimization
+  coldEmail?: string;
+  salaryNegotiation?: string;
+  recruiterPsychology?: string;
+  internshipHunter?: InternshipHunter;
 }
 
 export interface ResumeAnalysis {

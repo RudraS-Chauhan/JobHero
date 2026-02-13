@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from "jspdf";
 import { JobToolkit, ResumeAnalysis, UserInput } from '../types';
-import { analyzeResume } from '../services/geminiService';
+import { analyzeResume, generateEliteTools } from '../services/geminiService';
 import { ResumePreview, TemplateType } from './ResumePreview';
 import { ResumeIcon } from './icons/ResumeIcon';
 import { CoverLetterIcon } from './icons/CoverLetterIcon';
@@ -27,6 +27,7 @@ interface ResultsDisplayProps {
   userInput: UserInput;
   onReset: () => void;
   onRegenerateRoadmap: (newRole: string, useThinkingModel: boolean) => Promise<void>;
+  onUpdateToolkit: (updates: Partial<JobToolkit>) => void;
 }
 
 type Tab = 'resume' | 'coverLetter' | 'linkedin' | 'interview' | 'roadmap' | 'elite';
@@ -127,7 +128,7 @@ const RoadmapStepItem: React.FC<{ step: any, index: number }> = ({ step, index }
                 className={`bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer ${
                     isExpanded 
                         ? 'shadow-lg border-blue-200 dark:border-blue-800 ring-1 ring-blue-100 dark:ring-blue-900/30' 
-                        : 'shadow-sm border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md hover:-translate-y-1 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                        : 'shadow-sm border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-800/80'
                 }`}
                 onClick={() => setIsExpanded(!isExpanded)}
                 onKeyDown={handleKeyDown}
@@ -205,20 +206,31 @@ const ActionButtons: React.FC<{
     templateSelector?: React.ReactNode 
 }> = ({ textToCopy, onDownloadPDF, onShare, templateSelector }) => {
     const [copied, setCopied] = useState(false);
+    const [shared, setShared] = useState(false);
+
     const handleCopy = () => {
         navigator.clipboard.writeText(textToCopy).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         });
     };
+
+    const handleShare = () => {
+        if (onShare) {
+            onShare();
+            setShared(true);
+            setTimeout(() => setShared(false), 2000);
+        }
+    };
+
     return (
         <div className="flex flex-wrap items-center justify-end gap-2 mb-4 sm:mb-0">
             {templateSelector}
             <div className="flex gap-2">
                 {onShare && (
-                     <Tooltip text="Get Shareable Link" position="bottom">
-                        <button onClick={onShare} className="bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 p-2 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm" aria-label="Share">
-                            <ShareIcon className="h-5 w-5" />
+                     <Tooltip text={shared ? "Link Copied!" : "Get Shareable Link"} position="bottom">
+                        <button onClick={handleShare} className="bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 p-2 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm transition-colors" aria-label="Share">
+                            {shared ? <CheckIcon className="h-5 w-5" /> : <ShareIcon className="h-5 w-5" />}
                         </button>
                     </Tooltip>
                 )}
@@ -257,7 +269,7 @@ const ProUpsellCard: React.FC<{ description: string; onUnlock: () => void }> = (
     </div>
 );
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onReset, onRegenerateRoadmap }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onReset, onRegenerateRoadmap, onUpdateToolkit }) => {
   const [activeTab, setActiveTab] = useState<Tab>('resume');
   const [newRoleInput, setNewRoleInput] = useState('');
   const [isRegeneratingRoadmap, setIsRegeneratingRoadmap] = useState(false);
@@ -265,11 +277,29 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('Classic');
   const [resumeAnalysis, setResumeAnalysis] = useState<ResumeAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingElite, setIsGeneratingElite] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [transactionId, setTransactionId] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [copiedHeadlineIndex, setCopiedHeadlineIndex] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [timeRemaining, setTimeRemaining] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+        const expiryStr = localStorage.getItem('jobHero_proExpiry');
+        if (expiryStr) {
+             const diff = parseInt(expiryStr, 10) - Date.now();
+             if (diff > 0) {
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                const h = hours.toString().padStart(2, '0');
+                const m = minutes.toString().padStart(2, '0');
+                const s = seconds.toString().padStart(2, '0');
+                return `${h}:${m}:${s}`;
+             }
+        }
+    }
+    return "";
+  });
   
   // State for LinkedIn Headline Swapping
   const [currentHeadline, setCurrentHeadline] = useState(toolkit.linkedin.headline);
@@ -382,10 +412,23 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       }
   };
 
+  const handleGenerateEliteTools = async () => {
+      setIsGeneratingElite(true);
+      setLocalError(null);
+      try {
+          const eliteData = await generateEliteTools(userInput);
+          onUpdateToolkit(eliteData);
+      } catch (e: any) {
+          setLocalError(e.message || "Failed to generate Elite Tools");
+      } finally {
+          setIsGeneratingElite(false);
+      }
+  };
+
   const handleGenerateShareLink = () => {
       const payload = { r: toolkit.resume, t: selectedTemplate, n: userInput.fullName, e: userInput.email, p: userInput.phone, l: userInput.linkedinGithub || "" };
       const shareUrl = `${window.location.origin}${window.location.pathname}?shareData=${btoa(encodeURIComponent(JSON.stringify(payload)))}`;
-      navigator.clipboard.writeText(shareUrl).then(() => alert("Link Copied!"));
+      navigator.clipboard.writeText(shareUrl);
   };
 
   const handleDownloadPDF = (type: 'resume' | 'coverLetter') => {
@@ -442,9 +485,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
     if (tab === 'coverLetter') return toolkit.coverLetter;
     if (tab === 'linkedin') return `${currentHeadline}\n\n${toolkit.linkedin.bio}`;
     if (tab === 'interview') return toolkit.mockInterview.questions.map(q => q.question).join('\n');
-    if (tab === 'elite') return `${toolkit.coldEmail}\n\n${toolkit.salaryNegotiation}`;
+    if (tab === 'elite') return `${toolkit.coldEmail || ''}\n\n${toolkit.salaryNegotiation || ''}`;
     return '';
   };
+
+  // Check if Elite content exists
+  const hasEliteContent = toolkit.coldEmail && toolkit.salaryNegotiation;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -516,29 +562,40 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     />
                 </div>
                 
-                {isProMember && (
-                    <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden animate-in fade-in slide-in-from-top-4">
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-100/50 dark:bg-slate-900/50 p-1 sm:p-4 shadow-inner mb-10">
+                     <ResumePreview text={toolkit.resume} template={selectedTemplate} isBlurred={!isProMember && (selectedTemplate === 'Elegant' || selectedTemplate === 'Executive')} onUnlock={handleRazorpayPayment} userInput={userInput} />
+                </div>
+                
+                {/* ATS Analysis Section - Available for Everyone */}
+                <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 relative z-10">
                             <div>
-                                <h3 className="font-bold text-xl text-slate-900 dark:text-white">🤖 Deep AI Resume Audit & Psychology</h3>
-                                <p className="text-sm text-slate-500">Target Role: <span className="text-blue-600">{userInput.jobRoleTarget}</span></p>
+                                <h3 className="font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span className="text-2xl">🤖</span> ATS Compatibility Analyzer
+                                </h3>
+                                <p className="text-sm text-slate-500">Instant feedback for: <span className="text-blue-600 font-semibold">{userInput.jobRoleTarget}</span></p>
                             </div>
-                            <button onClick={handleAnalyzeResume} disabled={isAnalyzing} className="mt-4 md:mt-0 text-sm font-bold bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                                {isAnalyzing ? "Auditing..." : "Run Deep Audit"}
+                            <button onClick={handleAnalyzeResume} disabled={isAnalyzing} className="mt-4 md:mt-0 text-sm font-bold bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-lg hover:bg-black dark:hover:bg-slate-200 disabled:opacity-50 shadow-md transition-all hover:scale-105">
+                                {isAnalyzing ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin"></span>
+                                        Analyzing...
+                                    </span>
+                                ) : "Run Free ATS Scan"}
                             </button>
                         </div>
                         
-                        {resumeAnalysis && (
-                            <div className="space-y-6">
+                        {resumeAnalysis ? (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-center">
                                          <div className="text-center">
-                                             <div className="text-4xl font-black text-blue-600">{resumeAnalysis.score ?? 0}</div>
+                                             <div className={`text-4xl font-black ${resumeAnalysis.score >= 80 ? 'text-green-600' : resumeAnalysis.score >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{resumeAnalysis.score ?? 0}</div>
                                              <div className="text-xs font-bold text-slate-400">ATS Score</div>
                                          </div>
                                          <div className="text-center">
-                                             <div className="text-xl font-bold text-green-600">{resumeAnalysis.jobFitPrediction ?? "N/A"}</div>
-                                             <div className="text-xs font-bold text-slate-400">Fit</div>
+                                             <div className={`text-xl font-bold ${resumeAnalysis.jobFitPrediction === 'High' ? 'text-green-600' : 'text-slate-600 dark:text-slate-400'}`}>{resumeAnalysis.jobFitPrediction ?? "N/A"}</div>
+                                             <div className="text-xs font-bold text-slate-400">Fit Prediction</div>
                                          </div>
                                     </div>
                                     <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/50">
@@ -556,14 +613,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                     <AnalysisList title="Suggested Improvements" items={resumeAnalysis.improvements} type="improvement" />
                                 </div>
                             </div>
+                        ) : (
+                            <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                                Click "Run Free ATS Scan" to see how well your resume matches the job description.
+                            </div>
                         )}
                     </div>
-                )}
 
-                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-100/50 dark:bg-slate-900/50 p-1 sm:p-4 shadow-inner">
-                     <ResumePreview text={toolkit.resume} template={selectedTemplate} isBlurred={!isProMember && (selectedTemplate === 'Elegant' || selectedTemplate === 'Executive')} onUnlock={handleRazorpayPayment} userInput={userInput} />
-                </div>
-                {!isProMember && <ProUpsellCard description="Unlock Elite Templates & Deep AI Audit." onUnlock={handleRazorpayPayment} />}
+                {!isProMember && <ProUpsellCard description="Unlock Elite Templates & Exclusive Career Strategies." onUnlock={handleRazorpayPayment} />}
             </>
         )}
 
@@ -678,89 +735,129 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             <div className="space-y-8">
                 {isProMember ? (
                     <div className="animate-in fade-in duration-500">
-                        {/* Recruiter Psychology Section */}
-                         <div className="bg-slate-900 text-white rounded-xl shadow-lg border border-slate-700 overflow-hidden mb-8 relative">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 text-9xl">🧠</div>
-                            <div className="p-6 relative z-10">
-                                <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2">
-                                    <span className="text-2xl">🧠</span> Recruiter Psychology
-                                </h3>
-                                <p className="text-slate-300 text-sm italic mb-4 border-l-4 border-purple-500 pl-4 py-2 bg-slate-800/50 rounded-r">
-                                    "Here is what I'm subconsciously thinking when I see your profile..."
-                                </p>
-                                <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
-                                    {toolkit.recruiterPsychology || "Analysis not available. Please regenerate."}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Internship & Hackathon Hunter */}
-                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
-                             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                                <span className="text-2xl">🕵️‍♂️</span> Internship & Hackathon Hunter
-                             </h3>
-                             
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Copy-Paste Search Strings</h4>
-                                    <div className="space-y-3">
-                                        {toolkit.internshipHunter?.searchQueries?.map((query, i) => (
-                                            <div key={i} className="group relative">
-                                                <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate pr-10">
-                                                    {query}
-                                                </div>
-                                                <button 
-                                                    onClick={() => navigator.clipboard.writeText(query)}
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 font-bold text-xs bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    COPY
-                                                </button>
-                                            </div>
-                                        )) || <p className="text-sm text-slate-500">No queries generated.</p>}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Target Platforms & Strategy</h4>
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        {toolkit.internshipHunter?.platforms?.map((platform, i) => (
-                                            <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-100 dark:border-blue-800">
-                                                {platform}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-800">
-                                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">🔥 THE WINNING HACK</p>
-                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                                            {toolkit.internshipHunter?.strategy || "No strategy available."}
-                                        </p>
-                                    </div>
-                                </div>
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden">
+                             <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-amber-400/10 rounded-full blur-xl"></div>
+                             <div className="flex items-center gap-3 relative z-10">
+                                 <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-full text-amber-600 dark:text-amber-400 ring-4 ring-white dark:ring-slate-800">
+                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                 </div>
+                                 <div>
+                                     <h3 className="font-bold text-slate-900 dark:text-white text-sm">Elite Pass Active</h3>
+                                     <p className="text-xs text-slate-500 dark:text-slate-400">Premium tools unlocked.</p>
+                                 </div>
+                             </div>
+                             <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 relative z-10">
+                                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expires in</span>
+                                  <span className="font-mono text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{timeRemaining}</span>
                              </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white font-bold flex justify-between">
-                                    <span>📧 Cold Email</span>
-                                    <button onClick={() => navigator.clipboard.writeText(toolkit.coldEmail)} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+                        {!hasEliteContent ? (
+                             <div className="text-center py-12">
+                                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Initialize Elite Strategy Engine</h3>
+                                 <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">Generate personalized cold emails, salary scripts, and recruiter psychological profiles.</p>
+                                 <button 
+                                    onClick={handleGenerateEliteTools} 
+                                    disabled={isGeneratingElite}
+                                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform transition hover:-translate-y-1 disabled:opacity-70"
+                                 >
+                                     {isGeneratingElite ? (
+                                         <span className="flex items-center gap-2">
+                                             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                             Generating Strategies...
+                                         </span>
+                                     ) : "Generate Elite Tools"}
+                                 </button>
+                             </div>
+                        ) : (
+                            <>
+                                {/* Recruiter Psychology Section */}
+                                <div className="bg-slate-900 text-white rounded-xl shadow-lg border border-slate-700 overflow-hidden mb-8 relative animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 text-9xl">🧠</div>
+                                    <div className="p-6 relative z-10">
+                                        <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2">
+                                            <span className="text-2xl">🧠</span> Recruiter Psychology
+                                        </h3>
+                                        <p className="text-slate-300 text-sm italic mb-4 border-l-4 border-purple-500 pl-4 py-2 bg-slate-800/50 rounded-r">
+                                            "Here is what I'm subconsciously thinking when I see your profile..."
+                                        </p>
+                                        <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                                            {toolkit.recruiterPsychology}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                    {toolkit.coldEmail || "Regenerate to see Cold Email."}
+
+                                {/* Internship & Hackathon Hunter */}
+                                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-100">
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                                        <span className="text-2xl">🕵️‍♂️</span> Internship & Hackathon Hunter
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Copy-Paste Search Strings</h4>
+                                            <div className="space-y-3">
+                                                {toolkit.internshipHunter?.searchQueries?.map((query, i) => (
+                                                    <div key={i} className="group relative">
+                                                        <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate pr-10">
+                                                            {query}
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => navigator.clipboard.writeText(query)}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 font-bold text-xs bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            COPY
+                                                        </button>
+                                                    </div>
+                                                )) || <p className="text-sm text-slate-500">No queries generated.</p>}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Target Platforms & Strategy</h4>
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                {toolkit.internshipHunter?.platforms?.map((platform, i) => (
+                                                    <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-100 dark:border-blue-800">
+                                                        {platform}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-800">
+                                                <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">🔥 THE WINNING HACK</p>
+                                                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                                    {toolkit.internshipHunter?.strategy || "No strategy available."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white font-bold flex justify-between">
-                                    <span>💰 Salary Negotiation</span>
-                                    <button onClick={() => navigator.clipboard.writeText(toolkit.salaryNegotiation)} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-2 delay-200">
+                                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white font-bold flex justify-between">
+                                            <span>📧 Cold Email</span>
+                                            <button onClick={() => navigator.clipboard.writeText(toolkit.coldEmail || "")} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+                                        </div>
+                                        <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                            {toolkit.coldEmail}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white font-bold flex justify-between">
+                                            <span>💰 Salary Negotiation</span>
+                                            <button onClick={() => navigator.clipboard.writeText(toolkit.salaryNegotiation || "")} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+                                        </div>
+                                        <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                            {toolkit.salaryNegotiation}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                    {toolkit.salaryNegotiation || "Regenerate to see Script."}
+                                <div className="text-center text-slate-400 text-xs mt-8">
+                                    These tools are generated based on your profile and target role to maximize conversion.
                                 </div>
-                            </div>
-                        </div>
-                        <div className="text-center text-slate-400 text-xs mt-8">
-                            These tools are generated based on your profile and target role to maximize conversion.
-                        </div>
+                            </>
+                        )}
                     </div>
                 ) : (
                    <div className="flex flex-col items-center justify-center py-16 text-center">
