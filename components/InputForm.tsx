@@ -8,6 +8,20 @@ interface InputFormProps {
   isLoading: boolean;
 }
 
+const COUNTRY_CODES = [
+  { code: "+91", country: "🇮🇳 IN" },
+  { code: "+1", country: "🇺🇸 US" },
+  { code: "+44", country: "🇬🇧 UK" },
+  { code: "+61", country: "🇦🇺 AU" },
+  { code: "+81", country: "🇯🇵 JP" },
+  { code: "+971", country: "🇦🇪 AE" },
+  { code: "+65", country: "🇸🇬 SG" },
+  { code: "+49", country: "🇩🇪 DE" },
+  { code: "+33", country: "🇫🇷 FR" },
+  { code: "+86", country: "🇨🇳 CN" },
+  { code: "+55", country: "🇧🇷 BR" }
+];
+
 const InputField: React.FC<{ 
     id: keyof UserInput; 
     label: string; 
@@ -76,14 +90,16 @@ const MOCK_DATA: UserInput = {
     education: "B.Tech Computer Science, Tech University (2025)",
     currentYear: "Final Year",
     skills: "React, TypeScript, Node.js, Tailwind CSS, PostgreSQL, Python, Git, AWS (Basic)",
-    projects: "1. TaskMaster AI: A productivity app using React & OpenAI API. [Demo: taskmaster.app]\n2. ShopEasy: Full-stack E-commerce platform with Stripe integration. [Repo: github.com/alexj/shopeasy]",
+    projects: "1. TaskMaster AI: A productivity app using React & OpenAI API.\n2. ShopEasy: Full-stack E-commerce platform with Stripe integration.",
+    projectLink: "github.com/alexj/taskmaster",
     internships: "Frontend Intern at StartupFlow (Summer 2024): Improved site performance by 40% and implemented new dashboard features.",
     yearsOfExperience: "0-1 Years",
     certifications: "Meta Frontend Developer Professional Certificate",
     jobRoleTarget: "Frontend Engineer",
     company: "Innovative Tech Startups or Product Companies",
     whyThisRole: "I love combining creativity with logic to build seamless user experiences.",
-    interests: "Open Source Contributing, UI/UX Design, Hiking"
+    interests: "Open Source Contributing, UI/UX Design, Hiking",
+    customCSS: "/* Add custom CSS to style your resume */\n.resume-header { border-bottom: 2px solid #2563eb; }"
 };
 
 const STEPS = [
@@ -112,15 +128,38 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
         if (saved) {
             const parsed = JSON.parse(saved);
             // Ensure yearsOfExperience is present if loading legacy data
-            return { ...parsed, yearsOfExperience: parsed.yearsOfExperience || '' };
+            return { 
+                ...parsed, 
+                yearsOfExperience: parsed.yearsOfExperience || '',
+                projectLink: parsed.projectLink || '',
+                customCSS: parsed.customCSS || ''
+            };
         }
     }
     return {
         fullName: '', email: '', phone: '', linkedinGithub: '', careerObjective: '',
         education: '', skills: '', projects: '', internships: '', yearsOfExperience: '', certifications: '',
         jobRoleTarget: '', company: '', whyThisRole: '', interests: '', currentYear: '',
+        projectLink: '', customCSS: ''
     };
   });
+
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNum, setPhoneNum] = useState("");
+
+  // Initialize phone state from loaded data
+  useEffect(() => {
+      if (formData.phone) {
+          // Attempt to split code and number if possible, else just put it in num
+          const matchedCode = COUNTRY_CODES.find(c => formData.phone.startsWith(c.code));
+          if (matchedCode) {
+              setCountryCode(matchedCode.code);
+              setPhoneNum(formData.phone.replace(matchedCode.code, "").trim());
+          } else {
+              setPhoneNum(formData.phone);
+          }
+      }
+  }, []); // Run once on mount
 
   const [isSaved, setIsSaved] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -143,17 +182,33 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePhoneChange = (num: string) => {
+      setPhoneNum(num);
+      setFormData(prev => ({ ...prev, phone: `${countryCode} ${num}`.trim() }));
+  };
+
+  const handleCountryCodeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const code = e.target.value;
+      setCountryCode(code);
+      setFormData(prev => ({ ...prev, phone: `${code} ${phoneNum}`.trim() }));
+  };
+
   const handleNext = () => {
-      // Basic validation for current step
+      // Validation Logic
       const requiredFields: (keyof UserInput)[] = [];
       if (currentStep === 1) requiredFields.push('fullName', 'email', 'phone');
-      if (currentStep === 2) requiredFields.push('education', 'currentYear', 'skills');
-      if (currentStep === 3) requiredFields.push('projects');
+      if (currentStep === 2) requiredFields.push('education', 'skills');
+      if (currentStep === 3) requiredFields.push('projects'); // Projects are MANDATORY for all levels
       if (currentStep === 4) requiredFields.push('jobRoleTarget', 'company', 'whyThisRole');
 
-      const missing = requiredFields.find(field => !formData[field]);
+      // Check for missing fields
+      const missing = requiredFields.find(field => {
+          const val = formData[field];
+          return !val || val.trim() === '';
+      });
+
       if (missing) {
-          alert(`Please fill in the required field: ${missing}`);
+          alert(`⚠️ Please fill in the required field: ${missing.replace(/([A-Z])/g, ' $1').trim()}.`);
           return;
       }
       
@@ -171,6 +226,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
 
   const handleMagicFill = () => {
       setFormData(MOCK_DATA);
+      setPhoneNum("555 019 2834");
+      setCountryCode("+1");
   };
 
   const handleImport = async () => {
@@ -184,8 +241,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
               // Keep default values if parsing returned empty for specific fields
               fullName: parsedData.fullName || prev.fullName,
               email: parsedData.email || prev.email,
-              phone: parsedData.phone || prev.phone,
           }));
+          
+          if (parsedData.phone) {
+              setPhoneNum(parsedData.phone); // Simplify for import
+          }
+
           setShowImportModal(false);
           setImportText('');
           alert("Data imported successfully! Please review the fields.");
@@ -202,8 +263,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
               fullName: '', email: '', phone: '', linkedinGithub: '', careerObjective: '',
               education: '', skills: '', projects: '', internships: '', yearsOfExperience: '', certifications: '',
               jobRoleTarget: '', company: '', whyThisRole: '', interests: '', currentYear: '',
+              projectLink: '', customCSS: ''
           };
           setFormData(emptyData);
+          setPhoneNum("");
           setCurrentStep(1);
           localStorage.removeItem(STORAGE_KEY_DATA);
           localStorage.removeItem(STORAGE_KEY_STEP);
@@ -326,10 +389,35 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                     <InputField id="email" label="Email" placeholder="e.g., ananya@example.com" value={formData.email} onChange={handleChange} required />
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField id="phone" label="Phone" placeholder="+91 98765 43210" value={formData.phone} onChange={handleChange} required />
+                    {/* Phone Input with Country Code */}
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Phone Number <span className="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <div className="flex gap-2">
+                             <select 
+                                value={countryCode} 
+                                onChange={handleCountryCodeChange}
+                                className="block w-24 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all"
+                             >
+                                 {COUNTRY_CODES.map((c) => (
+                                     <option key={c.code} value={c.code}>{c.country} {c.code}</option>
+                                 ))}
+                             </select>
+                             <input 
+                                type="tel"
+                                id="phone"
+                                value={phoneNum}
+                                onChange={(e) => handlePhoneChange(e.target.value)}
+                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 transition-all placeholder:text-slate-400"
+                                placeholder="98765 43210"
+                                required
+                             />
+                        </div>
+                    </div>
                     <InputField id="linkedinGithub" label="Links (LinkedIn / GitHub / Portfolio)" placeholder="Optional urls..." value={formData.linkedinGithub} onChange={handleChange} />
                  </div>
-                 <TextareaField id="careerObjective" label="Career Objective" placeholder="A short summary of who you are and what you want." value={formData.careerObjective} onChange={handleChange} rows={2} helpText="Keep it punchy. We'll polish it." />
+                 <TextareaField id="careerObjective" label="Career Objective / Bio" placeholder="Who are you? (e.g., '3rd year student passionate about AI')" value={formData.careerObjective} onChange={handleChange} rows={2} required helpText="Keep it punchy. We'll polish it." />
               </div>
           )}
 
@@ -338,25 +426,29 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
               <div className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField id="education" label="Degree / College" placeholder="e.g., B.Tech CSE, IIT Delhi" value={formData.education} onChange={handleChange} required autoFocus />
-                    <InputField id="currentYear" label="Current Year" placeholder="e.g., 3rd Year / 2025 Grad" value={formData.currentYear} onChange={handleChange} required />
+                    <InputField id="currentYear" label="Current Year / Status" placeholder="e.g., 2nd Year Student, 2025 Grad" value={formData.currentYear} onChange={handleChange} required />
                  </div>
                  <TextareaField id="skills" label="Your Skills Arsenal" placeholder="React, Python, Communication, Design..." value={formData.skills} onChange={handleChange} required rows={4} helpText="List everything you're good at. Don't be shy!" />
-                 <InputField id="certifications" label="Certifications (Optional)" placeholder="Any extra courses or badges?" value={formData.certifications} onChange={handleChange} />
+                 <InputField id="certifications" label="Certifications (Optional)" placeholder="Coursera, Udemy, Hackerrank badges?" value={formData.certifications} onChange={handleChange} />
               </div>
           )}
 
           {/* STEP 3: EXPERIENCE */}
           {currentStep === 3 && (
               <div className="space-y-6">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-sm text-blue-800 dark:text-blue-300 mb-4 border border-blue-100 dark:border-blue-800">
+                      💡 <strong>Student Tip:</strong> If you don't have formal internships, list academic projects, hackathons, or freelance work!
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                       <div className="md:col-span-3">
-                          <TextareaField id="internships" label="Experience / Internships" placeholder="Role, Company, Date. What did you achieve?" value={formData.internships} onChange={handleChange} rows={4} helpText="If none, type 'Fresher - Looking for first opportunity'." autoFocus />
+                          <TextareaField id="internships" label="Experience / Internships (Optional)" placeholder="Role, Company, Date. What did you achieve?" value={formData.internships} onChange={handleChange} rows={4} helpText="Leave empty if you are a 1st/2nd year student with no experience yet." autoFocus />
                       </div>
                       <div className="md:col-span-1">
-                          <InputField id="yearsOfExperience" label="Years of Experience" placeholder="e.g. 2 Years (Optional)" value={formData.yearsOfExperience} onChange={handleChange} />
+                          <InputField id="yearsOfExperience" label="YOE (Optional)" placeholder="e.g. 0-1 Years" value={formData.yearsOfExperience} onChange={handleChange} />
                       </div>
                   </div>
-                  <TextareaField id="projects" label="Key Projects" placeholder="1. Project Name: Description... [Link: example.com]" value={formData.projects} onChange={handleChange} required rows={6} helpText="Include links (GitHub/Demo) if possible! It proves your work is real." />
+                  <TextareaField id="projects" label="Key Projects (Mandatory)" placeholder="1. Project Name: Description... " value={formData.projects} onChange={handleChange} required rows={6} helpText="School/College projects COUNT! Describe what you built." />
+                  <InputField id="projectLink" label="Main Project Link" placeholder="e.g. github.com/my-best-project" value={formData.projectLink || ''} onChange={handleChange} />
               </div>
           )}
 
@@ -372,6 +464,26 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                         <TextareaField id="whyThisRole" label="Why them?" placeholder="I admire the innovative culture..." value={formData.whyThisRole} onChange={handleChange} rows={2} required />
                   </div>
                   <InputField id="interests" label="Personal Interests" placeholder="e.g., AI, Gaming, Cricket" value={formData.interests} onChange={handleChange} required />
+                  
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                      <details className="group">
+                          <summary className="flex items-center gap-2 font-semibold text-slate-500 hover:text-blue-600 cursor-pointer list-none text-sm transition-colors">
+                              <span className="transform transition-transform group-open:rotate-90">▶</span>
+                              🎨 Advanced: Custom Resume CSS
+                          </summary>
+                          <div className="mt-3">
+                              <TextareaField 
+                                id="customCSS" 
+                                label="Custom CSS" 
+                                placeholder=".resume-header { background: #000; } ... overrides" 
+                                value={formData.customCSS || ''} 
+                                onChange={handleChange} 
+                                rows={4} 
+                                helpText="Apply custom styling to the Resume Preview. Use element IDs or structure from the template." 
+                              />
+                          </div>
+                      </details>
+                  </div>
               </div>
           )}
 

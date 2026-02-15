@@ -16,6 +16,9 @@ export interface UserInput {
   whyThisRole: string;
   interests: string;
   currentYear: string;
+  // New fields
+  projectLink?: string;
+  customCSS?: string;
 }
 
 export interface RoadmapStep {
@@ -24,6 +27,9 @@ export interface RoadmapStep {
   title: string;
   description: string;
   tools: string[];
+  // New backbone fields
+  milestones: string[];
+  resources: { title: string; type: 'Course' | 'Book' | 'Tool'; link?: string }[];
 }
 
 export interface InternshipHunter {
@@ -58,6 +64,7 @@ export interface JobToolkit {
   followUpEmail?: string;
   referralEmail?: string;
   internshipHunter?: InternshipHunter;
+  suggestedCourses?: { title: string; provider: string; reason: string }[];
 }
 
 export interface ResumeAnalysis {

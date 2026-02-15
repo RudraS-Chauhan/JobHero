@@ -149,33 +149,37 @@ const HowItWorks = () => (
   </div>
 );
 
-// Error Handling Helpers
+// Expanded Error Handling Helpers
 const getTroubleshootingTips = (errorMsg: string) => {
     const msg = errorMsg.toLowerCase();
     
     // API Configuration
-    if (msg.includes('api key')) return "The API Key is missing or invalid. Please check your .env file or configuration.";
+    if (msg.includes('api key')) return "The API Key is missing or invalid. Please check your environment variables (.env file) or Vercel/Netlify configuration.";
     
     // Server/Network Issues
-    if (msg.includes('429') || msg.includes('quota')) return "The AI service is experiencing high traffic (Quota Exceeded). Please wait 30 seconds and try again.";
-    if (msg.includes('503') || msg.includes('overloaded')) return "Service overloaded. Please try again in a few moments.";
-    if (msg.includes('network') || msg.includes('fetch')) return "Network error. Please check your internet connection or disable any VPN/Ad-blockers that might interfere.";
+    if (msg.includes('429') || msg.includes('quota')) return "You have exceeded the API rate limit (Quota Exceeded). The free tier allows limited requests per minute. Please wait 60 seconds and try again.";
+    if (msg.includes('503') || msg.includes('overloaded')) return "Google's AI servers are currently overloaded due to high global traffic. This is temporary. Please wait 1-2 minutes and retry.";
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) return "We couldn't reach the AI servers. Please check your internet connection. If you are using a VPN or Ad-blocker, try disabling them.";
     
     // Content & Parsing Issues
-    if (msg.includes('safety') || msg.includes('blocked') || msg.includes('candidate')) return "Content flagged by safety filters. Please try rephrasing your input to be more professional and remove any potentially sensitive or explicit terms.";
-    if (msg.includes('json') || msg.includes('parse')) return "The AI response was incomplete or malformed. This happens occasionally with complex requests. Please try again.";
+    if (msg.includes('safety') || msg.includes('blocked') || msg.includes('candidate')) return "The AI flagged your input as potentially unsafe or sensitive. Please revise your content to be more professional and remove any controversial or explicit language.";
+    if (msg.includes('json') || msg.includes('parse') || msg.includes('syntax')) return "The AI returned a malformed response, likely due to a complex request. Please click 'Try Again' to regenerate.";
+    if (msg.includes('400') || msg.includes('invalid argument')) return "The request was invalid. This often happens if the input text is too long or contains unsupported characters. Try shortening your entries.";
+    if (msg.includes('404') || msg.includes('not found')) return "The requested AI model version may be deprecated or unavailable in your region. Please contact support.";
     
-    return "Please verify your input and ensure all required fields are filled. If the problem persists, try refreshing the page.";
+    return "Please verify all input fields are filled correctly. If the issue persists, try refreshing the page or clearing your browser cache.";
 };
 
 const getErrorTitle = (errorMsg: string) => {
     const msg = errorMsg.toLowerCase();
     if (msg.includes('api key')) return "Configuration Error";
-    if (msg.includes('network') || msg.includes('fetch')) return "Connection Issue";
-    if (msg.includes('429') || msg.includes('quota')) return "Server Busy";
+    if (msg.includes('network') || msg.includes('fetch')) return "Connection Failed";
+    if (msg.includes('429') || msg.includes('quota')) return "Rate Limit Exceeded";
+    if (msg.includes('503') || msg.includes('overloaded')) return "Service Overloaded";
     if (msg.includes('safety') || msg.includes('blocked')) return "Content Flagged";
     if (msg.includes('json') || msg.includes('parse')) return "Generation Error";
-    return "Generation Failed";
+    if (msg.includes('400')) return "Invalid Request";
+    return "Something went wrong";
 };
 
 const App: React.FC = () => {
@@ -227,8 +231,13 @@ const App: React.FC = () => {
       const result = await generateJobToolkit(data);
       setJobToolkit(result);
     } catch (err: any) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       console.error("App Error:", err);
+      // Ensure we always have a string error message
+      let errorMessage = 'An unknown error occurred';
+      if (typeof err === 'string') errorMessage = err;
+      else if (err instanceof Error) errorMessage = err.message;
+      else if (err?.message) errorMessage = err.message;
+      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -374,52 +383,62 @@ const App: React.FC = () => {
         )}
 
         {error && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 border-l-4 border-red-500 max-w-2xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 relative z-40" role="alert">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 border-l-4 border-red-500 max-w-2xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 relative z-40 ring-1 ring-slate-900/5" role="alert">
                 <button 
                   onClick={() => setError(null)} 
-                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
                   aria-label="Dismiss error"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
-                <div className="flex items-start gap-4">
-                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 shrink-0 relative">
+                <div className="flex items-start gap-5">
+                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 shrink-0 relative mt-1">
                         {error.toLowerCase().includes('safety') ? (
                              <span className="text-xl">🛡️</span>
+                        ) : error.toLowerCase().includes('network') ? (
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M10.5 10.5L3 3m18 0l-7.5 7.5M4.5 4.5l1.5 1.5m12 12l1.5 1.5" />
+                            </svg>
                         ) : (
                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                             </svg>
                         )}
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800 animate-pulse"></span>
                     </div>
                     <div className="flex-1">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{getErrorTitle(error)}</h3>
-                        <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed">{error}</p>
+                        <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed font-mono bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded border border-slate-100 dark:border-slate-800 break-words">{error}</p>
                         
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
-                            <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
-                              <span>💡</span> Troubleshooting
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 mb-4">
+                            <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase mb-2 flex items-center gap-1">
+                              <span>💡</span> Troubleshooting Tip
                             </p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{getTroubleshootingTips(error)}</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{getTroubleshootingTips(error)}</p>
                         </div>
 
-                        <div className="mt-4 flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                             {!jobToolkit && (
                               <button
                                   onClick={handleRetry}
-                                  className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                                  className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold rounded-lg hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors shadow-sm"
                               >
-                                  Try Again
+                                  ↻ Try Again
                               </button>
                             )}
                             <button
-                                onClick={() => navigator.clipboard.writeText(error)}
-                                className="text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline"
+                                onClick={() => {
+                                    const subject = encodeURIComponent("App Error Report");
+                                    const body = encodeURIComponent(`Error Details:\n${error}\n\nTime: ${new Date().toISOString()}`);
+                                    window.location.href = `mailto:rudrasinghchauhan2007@gmail.com?subject=${subject}&body=${body}`;
+                                }}
+                                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2"
                             >
-                                Copy Error Details
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                                </svg>
+                                Contact Support
                             </button>
                         </div>
                     </div>

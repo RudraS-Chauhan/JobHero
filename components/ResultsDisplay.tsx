@@ -206,8 +206,8 @@ const FormatCoverLetter: React.FC<{ text: string }> = ({ text }) => {
                             key={i} 
                             contentEditable
                             suppressContentEditableWarning
-                            className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded border border-dashed border-amber-400 dark:border-amber-600 font-bold mx-1 shadow-sm transition-all hover:scale-105 cursor-text focus:ring-2 focus:ring-amber-400 focus:outline-none"
-                            title="Editable Placeholder - Type directly"
+                            className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded border-2 border-dashed border-yellow-400 dark:border-yellow-600 font-bold mx-1 shadow-sm transition-all hover:scale-105 cursor-text focus:ring-4 focus:ring-yellow-300 dark:focus:ring-yellow-700 focus:outline-none focus:bg-white dark:focus:bg-slate-800"
+                            title="Editable Placeholder - Type directly to replace"
                         >
                             {part}
                         </span>
@@ -219,7 +219,7 @@ const FormatCoverLetter: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
-const RoadmapStepItem: React.FC<{ step: any, index: number }> = ({ step, index }) => {
+const RoadmapStepItem: React.FC<{ step: any, index: number, isLast: boolean, onUnlock: () => void, isPro: boolean }> = ({ step, index, isLast, onUnlock, isPro }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -230,50 +230,113 @@ const RoadmapStepItem: React.FC<{ step: any, index: number }> = ({ step, index }
     };
 
     return (
-        <div className="relative pl-8 sm:pl-32 py-3 group focus:outline-none">
-            <div className="absolute left-2 sm:left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700 group-hover:bg-blue-400 dark:group-hover:bg-blue-600 transition-colors"></div>
-            <div className={`absolute left-[0.2rem] sm:-left-[0.35rem] top-6 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 transition-all duration-300 z-10 ${isExpanded ? 'bg-blue-600 scale-125 ring-4 ring-blue-100 dark:ring-blue-900/30' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-blue-500 group-hover:scale-110'}`}></div>
-            <div className={`hidden sm:block absolute left-4 w-24 text-right top-5 text-xs font-bold transition-colors ${isExpanded ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`}>
-                {step.duration}
-            </div>
+        <div className="relative pl-12 sm:pl-16 py-4 group">
+            {/* Connector Line */}
+            {!isLast && (
+                <div className="absolute left-[1.15rem] sm:left-[2.15rem] top-8 bottom-[-2rem] w-0.5 bg-slate-200 dark:bg-slate-700 group-hover:bg-blue-300 dark:group-hover:bg-blue-800 transition-colors z-0"></div>
+            )}
+            
+            {/* Number Node */}
             <div 
-                className={`bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer ${
+                className={`absolute left-[0.4rem] sm:left-[1.4rem] top-5 w-6 h-6 sm:w-8 sm:h-8 rounded-full border-4 border-white dark:border-slate-950 flex items-center justify-center text-xs font-bold transition-all duration-300 z-10 shadow-sm ${
                     isExpanded 
-                        ? 'shadow-lg border-blue-200 dark:border-blue-800 ring-1 ring-blue-100 dark:ring-blue-900/30' 
-                        : 'shadow-sm border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                        ? 'bg-blue-600 text-white scale-110 ring-4 ring-blue-100 dark:ring-blue-900/30' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:border-blue-200'
+                }`}
+            >
+                {index + 1}
+            </div>
+
+            <div 
+                className={`bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer relative ${
+                    isExpanded 
+                        ? 'shadow-lg border-blue-200 dark:border-blue-800 ring-1 ring-blue-100 dark:ring-blue-900/20' 
+                        : 'shadow-sm border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md'
                 }`}
                 onClick={() => setIsExpanded(!isExpanded)}
                 onKeyDown={handleKeyDown}
                 role="button"
                 tabIndex={0}
                 aria-expanded={isExpanded}
-                aria-label={`Expand step ${index + 1}: ${step.title}`}
             >
-                <div className="p-5 flex justify-between items-center">
-                    <div>
-                        <div className="sm:hidden text-xs font-bold text-blue-600 mb-1">{step.duration}</div>
-                        <h3 className={`text-lg font-bold transition-colors ${isExpanded ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white group-hover:text-blue-600'}`}>{step.title}</h3>
-                        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1">{step.phase}</div>
+                <div className="p-5 flex justify-between items-start gap-4">
+                    <div className="flex-grow">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 mb-2">
+                            {step.phase} • {step.duration}
+                        </span>
+                        <h3 className={`text-lg font-bold transition-colors ${isExpanded ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white group-hover:text-blue-600'}`}>
+                            {step.title}
+                        </h3>
+                        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mt-1 line-clamp-2">
+                            {step.description}
+                        </p>
                     </div>
-                    <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 rotate-180' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-slate-700 group-hover:text-blue-500'}`}>
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                    <div className={`p-1.5 rounded-full mt-1 transition-all duration-300 ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 rotate-180' : 'text-slate-400 group-hover:bg-slate-50 dark:group-hover:bg-slate-700'}`}>
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                         </svg>
                     </div>
                 </div>
                 
+                {/* Expanded Content */}
                 <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
-                        <div className="p-5 pt-0 border-t border-slate-100 dark:border-slate-700/50 mt-2 bg-slate-50/50 dark:bg-slate-800/50">
-                             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-4 mt-4">{step.description}</p>
-                             <div className="flex flex-wrap gap-2">
+                        <div className="px-5 pb-5 pt-0 border-t border-slate-100 dark:border-slate-700/50 mt-2">
+                             
+                             {/* Tools Section */}
+                             <div className="mt-4 flex flex-wrap gap-2 mb-6">
                                 {step.tools?.map((tool: string, t: number) => (
-                                    <span key={t} className="px-2.5 py-1.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-md border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 shadow-sm">
+                                    <span key={t} className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-md border border-slate-200 dark:border-slate-600 flex items-center gap-1.5">
                                         <TechIcon name={tool} className="w-3.5 h-3.5" />
                                         {tool}
                                     </span>
                                 ))}
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Milestones Checklist */}
+                                <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-100 dark:border-blue-900/30">
+                                    <h4 className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <CheckIcon className="w-4 h-4" /> Smart Action Plan
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {step.milestones?.map((m: string, i: number) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                                <input type="checkbox" className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                                                <span>{m}</span>
+                                            </li>
+                                        )) || <li className="text-xs text-slate-400 italic">No milestones generated.</li>}
+                                    </ul>
+                                </div>
+
+                                {/* Curated Resources (Elite Feature) */}
+                                <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-lg p-4 border border-amber-100 dark:border-amber-900/30 relative overflow-hidden">
+                                    {!isPro && (
+                                        <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4 z-10">
+                                            <span className="text-2xl mb-1">🔒</span>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-white mb-2">Pro Resources Locked</p>
+                                            <button onClick={onUnlock} className="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-full font-bold transition-colors">
+                                                Unlock
+                                            </button>
+                                        </div>
+                                    )}
+                                    <h4 className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <span className="text-sm">📚</span> Elite Resources
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {step.resources?.map((r: any, i: number) => (
+                                            <li key={i} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-amber-100 dark:border-amber-900/50 shadow-sm">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{r.title}</span>
+                                                    <span className="text-[10px] text-slate-500 uppercase">{r.type}</span>
+                                                </div>
+                                                <ArrowRightIcon className="w-3 h-3 text-slate-400" />
+                                            </li>
+                                        )) || <li className="text-xs text-slate-400 italic">No resources found.</li>}
+                                    </ul>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -397,6 +460,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   const [copiedHeadlineIndex, setCopiedHeadlineIndex] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [progressRemaining, setProgressRemaining] = useState<number>(0);
+  const [copiedBio, setCopiedBio] = useState(false);
   
   // Finder Tab State
   const [isFinding, setIsFinding] = useState(false);
@@ -620,6 +684,13 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         setEvaluatingIndex(null);
     }
   };
+  
+  const handleCopyBio = () => {
+      navigator.clipboard.writeText(toolkit.linkedin.bio).then(() => {
+          setCopiedBio(true);
+          setTimeout(() => setCopiedBio(false), 2000);
+      });
+  };
 
   const handleToggleThinkingModel = () => { setUseThinkingModel(!useThinkingModel); };
   const handleToggleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleThinkingModel(); } };
@@ -785,7 +856,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             </>
         )}
 
-        {/* ... (Other tabs: CoverLetter, LinkedIn, Interview, Roadmap - no changes) */}
+        {/* ... (Other tabs: CoverLetter, LinkedIn, Interview - no changes) */}
         
         {activeTab === 'coverLetter' && (
             <>
@@ -827,8 +898,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     </div>
                 )}
             </div>
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-4">About Section</h3>
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700 relative group">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase">About Section</h3>
+                    <button 
+                        onClick={handleCopyBio}
+                        className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
+                    >
+                         {copiedBio ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                         {copiedBio ? 'Copied' : 'Copy'}
+                    </button>
+                </div>
                 <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">{toolkit.linkedin.bio}</p>
             </div>
           </div>
@@ -918,9 +998,19 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                 </button>
             </div>
             
-            <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-4 pb-4">
+            <div className="relative pt-4">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                    <span className="text-2xl">🗺️</span> Career Mastery Flowchart
+                </h3>
                 {Array.isArray(toolkit.careerRoadmap) ? toolkit.careerRoadmap.map((step, i) => (
-                    <RoadmapStepItem key={i} step={step} index={i} />
+                    <RoadmapStepItem 
+                        key={i} 
+                        step={step} 
+                        index={i} 
+                        isLast={i === toolkit.careerRoadmap.length - 1} 
+                        onUnlock={handleRazorpayPayment}
+                        isPro={isProMember}
+                    />
                 )) : (
                     <div className="p-4 bg-red-50 text-red-600 rounded">Legacy roadmap format. Please regenerate.</div>
                 )}
@@ -928,6 +1018,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           </div>
         )}
 
+        {/* ... (Elite tab logic remains the same) ... */}
         {activeTab === 'elite' && (
             <div className="space-y-8">
                 {isProMember ? (
@@ -1020,6 +1111,24 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Suggested Courses Section */}
+                                {toolkit.suggestedCourses && toolkit.suggestedCourses.length > 0 && (
+                                    <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/10 dark:to-blue-900/10 rounded-xl shadow-sm border border-cyan-100 dark:border-cyan-800 p-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-200">
+                                        <h3 className="text-lg font-bold text-cyan-900 dark:text-cyan-300 mb-4 flex items-center gap-2">
+                                            <span className="text-xl">🎓</span> Suggested Courses & Certifications
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {toolkit.suggestedCourses.map((course, idx) => (
+                                                <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col">
+                                                    <div className="text-xs font-bold text-cyan-600 dark:text-cyan-400 mb-1 uppercase">{course.provider}</div>
+                                                    <div className="font-bold text-slate-900 dark:text-white mb-2 leading-tight">{course.title}</div>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-auto">{course.reason}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Internship & Hackathon Hunter Section (Moved from Finder Tab) */}
                                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-200 relative overflow-hidden">

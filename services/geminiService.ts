@@ -1,12 +1,45 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserInput, JobToolkit, ResumeAnalysis } from '../types';
 
+// Shared Schema Definitions
+const roadmapSchema = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+        phase: { type: Type.STRING },
+        duration: { type: Type.STRING },
+        title: { type: Type.STRING },
+        description: { type: Type.STRING },
+        tools: { type: Type.ARRAY, items: { type: Type.STRING } },
+        milestones: { 
+            type: Type.ARRAY, 
+            items: { type: Type.STRING },
+            description: "3-4 highly specific, actionable tasks to complete this phase (e.g., 'Build a JWT Auth System', not just 'Learn Auth')."
+        },
+        resources: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING, description: "Specific book title, course name, or tool." },
+                    type: { type: Type.STRING, enum: ["Course", "Book", "Tool"] }
+                }
+            }
+        }
+    }
+  }
+};
+
 // Core Schema: Essential tools for immediate display
 const coreResponseSchema = {
   type: Type.OBJECT,
   properties: {
-    resume: { type: Type.STRING, description: "A clean, ATS-friendly, one-page resume text. MUST use standard headers: SUMMARY, EDUCATION, SKILLS, EXPERIENCE, PROJECTS, CERTIFICATIONS." },
-    coverLetter: { type: Type.STRING, description: "A formal 3-paragraph business cover letter with header." },
+    resume: { type: Type.STRING, description: "A clean, ATS-friendly, one-page resume text. Use Standard Markdown Headers like '### EXPERIENCE' or just 'EXPERIENCE'. Do not use fancy formatting." },
+    coverLetter: { 
+        type: Type.STRING, 
+        description: "A formal 3-paragraph business cover letter with header. IMPORTANT: You MUST include '[Hiring Manager Name]' and '[Company Address]' in the header section as placeholders." 
+    },
     linkedin: {
       type: Type.OBJECT,
       properties: {
@@ -29,27 +62,14 @@ const coreResponseSchema = {
             type: Type.OBJECT,
             properties: {
               question: { type: Type.STRING },
-              feedback: { type: Type.STRING },
+              feedback: { type: Type.STRING, description: "A brief guideline on what a strong answer should include." },
             },
           },
         },
         outro: { type: Type.STRING },
       },
     },
-    careerRoadmap: {
-      type: Type.ARRAY,
-      description: "A chronological career progression plan.",
-      items: {
-        type: Type.OBJECT,
-        properties: {
-            phase: { type: Type.STRING },
-            duration: { type: Type.STRING },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            tools: { type: Type.ARRAY, items: { type: Type.STRING } }
-        }
-      }
-    },
+    careerRoadmap: roadmapSchema,
   },
 };
 
@@ -63,7 +83,18 @@ const eliteResponseSchema = {
     hrEmail: { type: Type.STRING, description: "A formal yet engaging cold email specifically for HR/Recruiters." },
     linkedinPitch: { type: Type.STRING, description: "A short (under 300 chars) connection request message for LinkedIn." },
     followUpEmail: { type: Type.STRING, description: "A polite follow-up email after applying or no response." },
-    referralEmail: { type: Type.STRING, description: "A template to ask a connection/alumni for a referral." }
+    referralEmail: { type: Type.STRING, description: "A template to ask a connection/alumni for a referral." },
+    suggestedCourses: {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING },
+                provider: { type: Type.STRING, description: "e.g. Coursera, Udemy, AWS" },
+                reason: { type: Type.STRING, description: "Why this certification boosts this specific resume." }
+            }
+        }
+    }
   }
 };
 
@@ -73,20 +104,6 @@ const internshipSchema = {
     searchQueries: { type: Type.ARRAY, items: { type: Type.STRING }, description: "5 advanced boolean search strings for finding internships and hackathons on Google/LinkedIn." },
     platforms: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3-5 specific platforms or job boards." },
     strategy: { type: Type.STRING, description: "A unique, actionable 'Hack' or strategy to stand out." }
-  }
-};
-
-const roadmapSchema = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-        phase: { type: Type.STRING },
-        duration: { type: Type.STRING },
-        title: { type: Type.STRING },
-        description: { type: Type.STRING },
-        tools: { type: Type.ARRAY, items: { type: Type.STRING } }
-    }
   }
 };
 
@@ -159,7 +176,7 @@ const generateWithFallback = async (
     config: any
 ) => {
     const apiKey = getApiKey();
-    if (!apiKey) throw new Error("Missing API Key.");
+    if (!apiKey) throw new Error("Missing API Key. Please verify your environment configuration.");
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
@@ -203,17 +220,17 @@ export const parseProfileData = async (text: string): Promise<Partial<UserInput>
 
 export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> => {
   const systemInstruction = `
-    You are "JobHero AI". Generate a professional career toolkit.
+    You are "JobHero AI", a Senior Staff Engineer and Hiring Manager mentor.
+    
+    **GOAL**: Create a professional career toolkit that feels bespoke and non-generic.
     
     **DATA INTEGRITY**: Use ONLY provided details. No hallucinations.
-    **CRITICAL**: The Resume MUST use these exact section headers: SUMMARY, EDUCATION, SKILLS, EXPERIENCE, PROJECTS, CERTIFICATIONS. Use "➤" for bullet points.
     
-    **OUTPUTS**:
-    1. **Resume**: Professional headers, bullet points (➤). Omit empty sections.
-    2. **Cover Letter**: 3-paragraph business format.
-    3. **LinkedIn**: Viral headline + 5 alternatives + Bio.
-    4. **Mock Interview**: 5 common & technical Q&A pairs + Intro/Outro.
-    5. **Career Roadmap**: 4-6 step chronological plan to master the role.
+    **CRITICAL GUIDELINES**:
+    1. **Resume**: STRICTLY use these section headers: SUMMARY, EDUCATION, SKILLS, EXPERIENCE, PROJECTS, CERTIFICATIONS. Use "➤" for bullet points. Do NOT use fancy formatting or columns. Just clean text.
+    2. **Roadmap**: Do NOT give generic advice like "Learn React". Give actionable, specific milestones like "Build a custom Hook for API fetching" or "Read 'Clean Code' by Uncle Bob".
+    3. **Mock Interview**: Generate 10 diverse questions ranging from behavioral to advanced technical/system design concepts appropriate for the role.
+    4. **Tone**: Authoritative, encouraging, and specific. Avoid robotic phrasing.
 
     Return JSON matching the schema.
   `;
@@ -221,14 +238,15 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
   const userContent = `
     Name: ${data.fullName} | Role: ${data.jobRoleTarget} | Company: ${data.company}
     Skills: ${data.skills} | Exp: ${data.internships} | YOE: ${data.yearsOfExperience}
-    Projects: ${data.projects} | Edu: ${data.education} | Bio: ${data.careerObjective}
+    Projects: ${data.projects} ${data.projectLink ? `| Project Link: ${data.projectLink}` : ''} 
+    Edu: ${data.education} | Bio: ${data.careerObjective}
     Certs: ${data.certifications}
   `;
 
   const config = {
     responseMimeType: "application/json",
     responseSchema: coreResponseSchema,
-    temperature: 0.3,
+    temperature: 0.4,
     systemInstruction: systemInstruction,
   };
   
@@ -236,7 +254,7 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
     const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", userContent, config);
     return JSON.parse(extractJson(response.text || "{}")) as JobToolkit;
   } catch (error: any) {
-    throw new Error("AI Generation failed: " + error.message);
+    throw new Error(error.message || "AI Generation failed");
   }
 };
 
@@ -284,6 +302,7 @@ export const generateEliteTools = async (data: UserInput): Promise<Partial<JobTo
       5. **LinkedIn Pitch**: Short connection request (<300 chars).
       6. **Follow-Up Email**: Polite nudge after no response.
       7. **Referral Request**: Asking a contact for a referral.
+      8. **Suggested Courses**: Recommend 3 high-impact certifications or courses to fill skill gaps.
       
       Return JSON matching the elite response schema.
     `;
@@ -341,8 +360,14 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
   const primaryModel = useThinkingModel ? "gemini-3-pro-preview" : "gemini-3-flash-preview";
   
   const systemInstruction = `
-    Create a step-by-step career roadmap to become a "${newRole}" in 2025.
-    Return a JSON array of steps (Phase, Duration, Title, Description, Tools).
+    Create a highly detailed, non-generic career roadmap to become a "${newRole}" in 2025.
+    
+    **REQUIREMENTS**:
+    1. **Milestones**: specific, tangible tasks (e.g., "Deploy a Dockerized App to AWS", NOT "Learn Docker").
+    2. **Resources**: Recommend REAL books (e.g., "Designing Data-Intensive Applications"), REAL courses (e.g., "Frontend Masters"), or specific tools.
+    3. **Tone**: Senior Mentor. Direct and actionable.
+    
+    Return a JSON array of steps.
   `;
 
   const userContent = `Current Skills: ${data.skills}. Target: ${newRole}`;
