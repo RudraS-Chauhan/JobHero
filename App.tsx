@@ -85,7 +85,6 @@ const ContactForm = () => {
 
 const HeroSection = () => (
   <div className="text-center mb-16 relative z-10">
-    {/* Floating Badge */}
     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-sm font-semibold mb-8 shadow-sm hover:scale-105 transition-transform cursor-default animate-in fade-in slide-in-from-top-8 duration-700">
       <span className="relative flex h-2.5 w-2.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -94,7 +93,6 @@ const HeroSection = () => (
       <span>Powered by <strong>Gemini 3.0 Flash</strong></span>
     </div>
 
-    {/* Animated Title */}
     <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
       Stop Applying. <br className="hidden sm:block" />
       <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 animate-gradient-x bg-[length:200%_auto]">
@@ -102,7 +100,6 @@ const HeroSection = () => (
       </span>
     </h1>
 
-    {/* Description */}
     <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
       JobHero AI turns your rough notes into a 
       <span className="font-semibold text-slate-900 dark:text-slate-100 bg-blue-50 dark:bg-blue-900/30 px-1 rounded mx-1 border border-blue-100 dark:border-blue-800">🏆 professional resume</span>, 
@@ -110,7 +107,6 @@ const HeroSection = () => (
       <span className="font-semibold text-slate-900 dark:text-slate-100 bg-green-50 dark:bg-green-900/30 px-1 rounded mx-1 border border-green-100 dark:border-green-800">🎤 interview kit</span> in seconds.
     </p>
 
-    {/* Feature Grid with Staggered Animation */}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12 text-left">
        {[
           { icon: "📝", title: "ATS Resume", desc: "Beat the bots", color: "bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800" },
@@ -153,35 +149,33 @@ const HowItWorks = () => (
   </div>
 );
 
-// Helper functions defined outside to prevent re-creation
+// Error Handling Helpers
 const getTroubleshootingTips = (errorMsg: string) => {
     const msg = errorMsg.toLowerCase();
-    if (msg.includes('api key')) {
-        return "The API Key is missing or invalid. Please check your .env file or configuration.";
-    }
-    if (msg.includes('429') || msg.includes('quota')) {
-        return "The AI service is currently experiencing high traffic. Please wait 30-60 seconds and try again.";
-    }
-    if (msg.includes('503') || msg.includes('overloaded')) {
-        return "Our AI servers are currently overloaded. Please try again in a few moments.";
-    }
-    if (msg.includes('safety') || msg.includes('blocked')) {
-        return "The content was flagged by safety filters. Please try rephrasing your input to be more professional.";
-    }
-    if (msg.includes('network') || msg.includes('fetch')) {
-        return "A network error occurred. Please check your internet connection.";
-    }
-    return "Ensure your input is valid and try again. If the issue persists, contact support.";
+    
+    // API Configuration
+    if (msg.includes('api key')) return "The API Key is missing or invalid. Please check your .env file or configuration.";
+    
+    // Server/Network Issues
+    if (msg.includes('429') || msg.includes('quota')) return "The AI service is experiencing high traffic (Quota Exceeded). Please wait 30 seconds and try again.";
+    if (msg.includes('503') || msg.includes('overloaded')) return "Service overloaded. Please try again in a few moments.";
+    if (msg.includes('network') || msg.includes('fetch')) return "Network error. Please check your internet connection or disable any VPN/Ad-blockers that might interfere.";
+    
+    // Content & Parsing Issues
+    if (msg.includes('safety') || msg.includes('blocked') || msg.includes('candidate')) return "Content flagged by safety filters. Please try rephrasing your input to be more professional and remove any potentially sensitive or explicit terms.";
+    if (msg.includes('json') || msg.includes('parse')) return "The AI response was incomplete or malformed. This happens occasionally with complex requests. Please try again.";
+    
+    return "Please verify your input and ensure all required fields are filled. If the problem persists, try refreshing the page.";
 };
 
 const getErrorTitle = (errorMsg: string) => {
     const msg = errorMsg.toLowerCase();
     if (msg.includes('api key')) return "Configuration Error";
-    if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) return "Connection Issue";
+    if (msg.includes('network') || msg.includes('fetch')) return "Connection Issue";
     if (msg.includes('429') || msg.includes('quota')) return "Server Busy";
     if (msg.includes('safety') || msg.includes('blocked')) return "Content Flagged";
-    if (msg.includes('503') || msg.includes('overloaded')) return "Service Overloaded";
-    return "Something Went Wrong";
+    if (msg.includes('json') || msg.includes('parse')) return "Generation Error";
+    return "Generation Failed";
 };
 
 const App: React.FC = () => {
@@ -191,7 +185,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   
-  // Lazy initialize shared view state to prevent flash of main content
   const [isSharedView, setIsSharedView] = useState(() => {
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
@@ -200,9 +193,7 @@ const App: React.FC = () => {
     return false;
   });
 
-  // Initialize Theme and Scroll Position
   useEffect(() => {
-    // Force scroll to top on mount
     window.scrollTo(0, 0);
 
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -273,7 +264,7 @@ const App: React.FC = () => {
 
   const handleRegenerateRoadmap = async (newRole: string, useThinkingModel: boolean) => {
     if (!userInput) return;
-    setError(null); // Clear previous errors
+    setError(null);
     try {
       const newRoadmap = await regenerateCareerRoadmap(userInput, newRole, useThinkingModel);
       setJobToolkit((prev) => prev ? ({ ...prev, careerRoadmap: newRoadmap }) : null);
@@ -284,8 +275,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Render Shared View if Active
-  // This early return is safe because it is after all hooks are initialized
   if (isSharedView) {
       return <SharedResumeView />;
   }
@@ -293,10 +282,8 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col relative overflow-x-hidden transition-colors duration-300">
       
-      {/* Background Pattern */}
       <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-40 dark:opacity-5 pointer-events-none z-0"></div>
       
-      {/* Animated Background Blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <div className="absolute -top-[20%] -left-[10%] w-[500px] h-[500px] bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-3xl animate-blob opacity-50 mix-blend-multiply dark:mix-blend-normal"></div>
           <div className="absolute top-[30%] -right-[20%] w-[600px] h-[600px] bg-indigo-400/20 dark:bg-indigo-600/10 rounded-full blur-3xl animate-blob animation-delay-2000 opacity-50 mix-blend-multiply dark:mix-blend-normal"></div>
@@ -344,7 +331,6 @@ const App: React.FC = () => {
                  <InputForm onSubmit={handleSubmit} isLoading={isLoading} />
             </div>
             
-            {/* Social Proof / Ticker */}
             <div className="mt-16 text-center opacity-70 animate-in fade-in duration-1000 delay-700">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Live Community Activity</p>
                 <div className="inline-flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 px-6 py-2 rounded-full border border-slate-200 dark:border-slate-700 backdrop-blur-sm">
@@ -388,48 +374,55 @@ const App: React.FC = () => {
         )}
 
         {error && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-8 text-center border border-red-100 dark:border-red-900/30 max-w-lg mx-auto mt-10 mb-8 animate-in shake sticky top-24 z-40" role="alert">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{getErrorTitle(error)}</h3>
-                <p className="text-slate-600 dark:text-slate-300 mb-6">{error}</p>
-                <div className="text-sm text-slate-500 dark:text-slate-400 mb-6 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg text-left border border-slate-100 dark:border-slate-700">
-                  <strong className="text-slate-700 dark:text-slate-300 block mb-2">Troubleshooting Tips:</strong>
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>{getTroubleshootingTips(error)}</li>
-                    <li>Check your API Key configuration in the environment.</li>
-                  </ul>
-                </div>
-                <div className="flex gap-3 justify-center flex-wrap">
-                    {!jobToolkit && (
-                      <button
-                          onClick={handleRetry}
-                          className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all hover:-translate-y-0.5"
-                      >
-                          Retry Generation
-                      </button>
-                    )}
-                    <button
-                        onClick={() => setError(null)}
-                        className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-slate-700 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-all"
-                    >
-                        Dismiss
-                    </button>
-                     <button
-                        onClick={() => navigator.clipboard.writeText(error)}
-                        className="inline-flex items-center px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                    >
-                        Copy Error
-                    </button>
-                     <a
-                        href={`mailto:rudrasinghchauhan2007@gmail.com?subject=${encodeURIComponent(`JobHero AI Error: ${getErrorTitle(error)}`)}&body=${encodeURIComponent(`Error Details:\n${error}`)}`}
-                        className="inline-flex items-center px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                    >
-                        Contact Support
-                    </a>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 border-l-4 border-red-500 max-w-2xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 relative z-40" role="alert">
+                <button 
+                  onClick={() => setError(null)} 
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 shrink-0 relative">
+                        {error.toLowerCase().includes('safety') ? (
+                             <span className="text-xl">🛡️</span>
+                        ) : (
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                            </svg>
+                        )}
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800 animate-pulse"></span>
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{getErrorTitle(error)}</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm leading-relaxed">{error}</p>
+                        
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
+                              <span>💡</span> Troubleshooting
+                            </p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{getTroubleshootingTips(error)}</p>
+                        </div>
+
+                        <div className="mt-4 flex gap-3">
+                            {!jobToolkit && (
+                              <button
+                                  onClick={handleRetry}
+                                  className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                              >
+                                  Try Again
+                              </button>
+                            )}
+                            <button
+                                onClick={() => navigator.clipboard.writeText(error)}
+                                className="text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline"
+                            >
+                                Copy Error Details
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         )}
@@ -448,7 +441,6 @@ const App: React.FC = () => {
       <footer className="w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 relative z-10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                {/* Brand */}
                 <div>
                     <div className="flex items-center space-x-2 mb-6">
                         <LogoIcon className="h-8 w-8 text-blue-600" />
@@ -459,14 +451,12 @@ const App: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Contact / Support - Swapped to middle column and upgraded */}
                 <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-lg">Contact Support</h3>
                     <p className="text-sm text-slate-500 mb-2">Have a question or billing issue? Drop us a message directly.</p>
                     <ContactForm />
                 </div>
 
-                 {/* Legal */}
                  <div>
                     <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-lg">Legal & Resources</h3>
                     <div className="flex flex-col gap-3">

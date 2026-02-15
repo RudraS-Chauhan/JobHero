@@ -49,10 +49,14 @@ export interface JobToolkit {
     outro: string;
   };
   careerRoadmap: RoadmapStep[];
-  // Optional for lazy loading / performance optimization
-  coldEmail?: string;
-  salaryNegotiation?: string;
+  // Elite / Premium Tools
   recruiterPsychology?: string;
+  salaryNegotiation?: string;
+  coldEmail?: string; // Founder/General
+  hrEmail?: string;
+  linkedinPitch?: string;
+  followUpEmail?: string;
+  referralEmail?: string;
   internshipHunter?: InternshipHunter;
 }
 
@@ -62,4 +66,11 @@ export interface ResumeAnalysis {
   improvements: string[];
   missingKeywords: string[];
   jobFitPrediction: string;
+}
+
+export interface ResumeVersion {
+    id: string;
+    role: string;
+    content: string;
+    timestamp: number;
 }

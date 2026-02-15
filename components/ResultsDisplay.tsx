@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from "jspdf";
-import { JobToolkit, ResumeAnalysis, UserInput } from '../types';
-import { analyzeResume, generateEliteTools } from '../services/geminiService';
+import { JobToolkit, ResumeAnalysis, UserInput, ResumeVersion } from '../types';
+import { analyzeResume, generateEliteTools, generateTargetedResume, evaluateInterviewAnswer, generateInternshipFinder } from '../services/geminiService';
 import { ResumePreview, TemplateType } from './ResumePreview';
 import { ResumeIcon } from './icons/ResumeIcon';
 import { CoverLetterIcon } from './icons/CoverLetterIcon';
@@ -15,6 +15,7 @@ import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { ShareIcon } from './icons/ShareIcon';
 import { TechIcon } from './icons/TechIcons';
+import { SearchIcon } from './icons/SearchIcon';
 
 declare global {
     interface Window {
@@ -51,11 +52,133 @@ const Tooltip = ({ text, children, position = 'top' }: { text: string; children?
   </div>
 );
 
+const CircularProgress = ({ score, size = 100, strokeWidth = 8 }: { score: number, size?: number, strokeWidth?: number }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (score / 100) * circumference;
+    const colorClass = score >= 80 ? 'text-green-500' : score >= 60 ? 'text-amber-500' : 'text-red-500';
+
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <svg className="transform -rotate-90 w-full h-full">
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    className="text-slate-200 dark:text-slate-700"
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    className={`${colorClass} transition-all duration-1000 ease-out`}
+                />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-2xl font-black ${colorClass}`}>{score}</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Score</span>
+            </div>
+        </div>
+    );
+};
+
+const TemplateCard: React.FC<{ type: TemplateType, isSelected: boolean, isLocked: boolean, onClick: () => void }> = ({ type, isSelected, isLocked, onClick }) => {
+    let previewContent;
+    
+    // CSS-based mini previews
+    if (type === 'Classic') {
+        previewContent = (
+            <div className="flex flex-col gap-1 p-2 h-full bg-white text-[4px] leading-tight font-serif text-slate-800">
+                <div className="w-1/2 h-2 bg-slate-800 mb-1"></div>
+                <div className="w-full h-px bg-slate-200 mb-1"></div>
+                <div className="w-full h-1 bg-slate-200"></div>
+                <div className="w-3/4 h-1 bg-slate-200"></div>
+                <div className="w-full h-px bg-slate-200 mt-1 mb-1"></div>
+                <div className="w-full h-1 bg-slate-200"></div>
+            </div>
+        );
+    } else if (type === 'Modern') {
+        previewContent = (
+             <div className="flex flex-col h-full bg-white text-[4px] font-sans">
+                 <div className="w-full h-3 bg-blue-600 mb-1"></div>
+                 <div className="p-1 flex flex-col gap-1">
+                    <div className="w-1/3 h-1 bg-blue-600 mb-1"></div>
+                    <div className="w-full h-1 bg-slate-200"></div>
+                    <div className="w-3/4 h-1 bg-slate-200"></div>
+                 </div>
+             </div>
+        );
+    } else if (type === 'Creative') {
+        previewContent = (
+            <div className="flex flex-col h-full bg-slate-50 text-[4px] font-sans p-2">
+                <div className="w-2/3 h-2 bg-purple-600 mb-1 rounded-sm"></div>
+                <div className="w-full h-px bg-purple-200 mb-1"></div>
+                <div className="flex gap-1">
+                    <div className="w-1/3 h-full bg-purple-100/50 rounded-sm"></div>
+                    <div className="flex-1 flex flex-col gap-1">
+                         <div className="w-full h-1 bg-slate-300"></div>
+                         <div className="w-full h-1 bg-slate-300"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    } else if (type === 'Elegant') {
+        previewContent = (
+            <div className="flex flex-col h-full bg-amber-50/20 text-[4px] font-serif p-2 border-t-2 border-amber-600">
+                 <div className="w-1/2 h-2 bg-slate-800 mb-2 border-b border-amber-200"></div>
+                 <div className="w-full h-1 bg-slate-300 mb-0.5"></div>
+                 <div className="w-3/4 h-1 bg-slate-300"></div>
+            </div>
+        );
+    } else if (type === 'Executive') {
+        previewContent = (
+            <div className="flex h-full bg-slate-900 text-[4px] font-sans">
+                 <div className="w-1/4 h-full bg-slate-800 border-r border-slate-700"></div>
+                 <div className="flex-1 p-2 flex flex-col gap-1">
+                      <div className="w-3/4 h-2 bg-white mb-1"></div>
+                      <div className="w-full h-1 bg-slate-400"></div>
+                      <div className="w-2/3 h-1 bg-slate-400"></div>
+                 </div>
+            </div>
+        );
+    }
+
+    return (
+        <div 
+            onClick={onClick}
+            className={`relative w-20 h-28 rounded-lg border-2 cursor-pointer transition-all transform hover:scale-105 shadow-sm overflow-hidden ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+        >
+            {previewContent}
+            {isLocked && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center">
+                    <div className="bg-amber-500 text-white rounded-full p-1.5 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+            )}
+            <div className={`absolute bottom-0 inset-x-0 text-[9px] font-bold text-center py-1 truncate px-1 ${type === 'Executive' ? 'bg-slate-800 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
+                {type}
+            </div>
+        </div>
+    );
+};
+
 const AnalysisList = ({ title, items, type }: { title: string, items: string[], type: 'strength' | 'improvement' }) => (
     <div className={`p-4 rounded-xl border h-full ${type === 'strength' ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30'}`}>
         <h4 className={`font-bold text-sm mb-3 flex items-center gap-2 ${type === 'strength' ? 'text-green-800 dark:text-green-400' : 'text-amber-800 dark:text-amber-400'}`}>
             {type === 'strength' ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0118 0z" /></svg>
             ) : (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             )}
@@ -73,9 +196,7 @@ const AnalysisList = ({ title, items, type }: { title: string, items: string[], 
 );
 
 const FormatCoverLetter: React.FC<{ text: string }> = ({ text }) => {
-    // Split text by bracketed placeholders like [Date], [Company Name]
     const parts = text.split(/(\[.*?\])/g);
-
     return (
         <div className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300 font-serif text-base">
             {parts.map((part, i) => {
@@ -109,21 +230,12 @@ const RoadmapStepItem: React.FC<{ step: any, index: number }> = ({ step, index }
     };
 
     return (
-        <div 
-            className="relative pl-8 sm:pl-32 py-3 group focus:outline-none"
-        >
-            {/* Timeline Line */}
+        <div className="relative pl-8 sm:pl-32 py-3 group focus:outline-none">
             <div className="absolute left-2 sm:left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700 group-hover:bg-blue-400 dark:group-hover:bg-blue-600 transition-colors"></div>
-            
-            {/* Timeline Dot */}
             <div className={`absolute left-[0.2rem] sm:-left-[0.35rem] top-6 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 transition-all duration-300 z-10 ${isExpanded ? 'bg-blue-600 scale-125 ring-4 ring-blue-100 dark:ring-blue-900/30' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-blue-500 group-hover:scale-110'}`}></div>
-
-            {/* Time Label (Desktop) */}
             <div className={`hidden sm:block absolute left-4 w-24 text-right top-5 text-xs font-bold transition-colors ${isExpanded ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`}>
                 {step.duration}
             </div>
-
-            {/* Content Card */}
             <div 
                 className={`bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer ${
                     isExpanded 
@@ -183,7 +295,6 @@ const SuccessModal = ({ email, transactionId }: { email: string, transactionId: 
             </div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 relative z-10">You're In! 🚀</h2>
             <p className="text-slate-600 dark:text-slate-300 mb-4 relative z-10">Elite Day Pass Activated (24 Hours).</p>
-            
             <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-left relative z-10">
                 <div className="flex items-center gap-2 mb-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                     <span className="text-lg">🧾</span>
@@ -224,9 +335,11 @@ const ActionButtons: React.FC<{
     };
 
     return (
-        <div className="flex flex-wrap items-center justify-end gap-2 mb-4 sm:mb-0">
-            {templateSelector}
-            <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-0 w-full">
+            <div className="flex-1">
+                {templateSelector}
+            </div>
+            <div className="flex gap-2 self-end sm:self-center">
                 {onShare && (
                      <Tooltip text={shared ? "Link Copied!" : "Get Shareable Link"} position="bottom">
                         <button onClick={handleShare} className="bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 p-2 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm transition-colors" aria-label="Share">
@@ -282,27 +395,28 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   const [transactionId, setTransactionId] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [copiedHeadlineIndex, setCopiedHeadlineIndex] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-        const expiryStr = localStorage.getItem('jobHero_proExpiry');
-        if (expiryStr) {
-             const diff = parseInt(expiryStr, 10) - Date.now();
-             if (diff > 0) {
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                const h = hours.toString().padStart(2, '0');
-                const m = minutes.toString().padStart(2, '0');
-                const s = seconds.toString().padStart(2, '0');
-                return `${h}:${m}:${s}`;
-             }
-        }
-    }
-    return "";
-  });
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [progressRemaining, setProgressRemaining] = useState<number>(0);
   
-  // State for LinkedIn Headline Swapping
+  // Finder Tab State
+  const [isFinding, setIsFinding] = useState(false);
+
+  // Resume Versioning State
+  const [resumeVersions, setResumeVersions] = useState<ResumeVersion[]>([
+      { id: 'v1-initial', role: userInput.jobRoleTarget, content: toolkit.resume, timestamp: Date.now() }
+  ]);
+  const [activeVersionId, setActiveVersionId] = useState<string>('v1-initial');
+  const [isGeneratingVersion, setIsGeneratingVersion] = useState(false);
+
+  // Derived state for current resume content
+  const currentResumeContent = resumeVersions.find(v => v.id === activeVersionId)?.content || toolkit.resume;
+  
   const [currentHeadline, setCurrentHeadline] = useState(toolkit.linkedin.headline);
+
+  // Interview Feedback State
+  const [interviewAnswers, setInterviewAnswers] = useState<Record<number, string>>({});
+  const [interviewFeedback, setInterviewFeedback] = useState<Record<number, string>>({});
+  const [evaluatingIndex, setEvaluatingIndex] = useState<number | null>(null);
 
   const [isProMember, setIsProMember] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -316,39 +430,44 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   });
 
   useEffect(() => {
-    if (!isProMember) return;
-
-    const updateTimer = () => {
+    const checkExpiry = () => {
         const expiryStr = localStorage.getItem('jobHero_proExpiry');
-        if (!expiryStr) {
-            setIsProMember(false);
-            return;
-        }
-        
-        const expiry = parseInt(expiryStr, 10);
-        const now = Date.now();
-        const diff = expiry - now;
-
-        if (diff <= 0) {
-            setIsProMember(false);
-            localStorage.removeItem('jobHero_proExpiry');
-            setTimeRemaining("");
+        if (expiryStr) {
+             const expiry = parseInt(expiryStr, 10);
+             const now = Date.now();
+             const diff = expiry - now;
+             
+             if (diff <= 0) {
+                 setIsProMember(false);
+                 setTimeRemaining("");
+                 setProgressRemaining(0);
+                 localStorage.removeItem('jobHero_proExpiry');
+             } else {
+                 setIsProMember(true);
+                 const h = Math.floor(diff / (1000 * 60 * 60));
+                 const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                 const s = Math.floor((diff % (1000 * 60)) / 1000);
+                 const hStr = h.toString().padStart(2, '0');
+                 const mStr = m.toString().padStart(2, '0');
+                 const sStr = s.toString().padStart(2, '0');
+                 setTimeRemaining(`${hStr}:${mStr}:${sStr}`);
+                 
+                 // Calculate percentage based on 24 hours
+                 const total = 24 * 60 * 60 * 1000;
+                 const p = Math.min(100, Math.max(0, (diff / total) * 100));
+                 setProgressRemaining(p);
+             }
         } else {
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            // Pad with leading zeros
-            const h = hours.toString().padStart(2, '0');
-            const m = minutes.toString().padStart(2, '0');
-            const s = seconds.toString().padStart(2, '0');
-            setTimeRemaining(`${h}:${m}:${s}`);
+            setIsProMember(false);
+            setTimeRemaining("");
+            setProgressRemaining(0);
         }
     };
 
-    updateTimer(); // Initial call
-    const interval = setInterval(updateTimer, 1000);
+    checkExpiry();
+    const interval = setInterval(checkExpiry, 1000);
     return () => clearInterval(interval);
-  }, [isProMember]);
+  }, []);
 
   const getRazorpayKey = () => {
     try {
@@ -380,19 +499,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         if (confirm("⚠️ KEY MISSING. Click OK to Simulate Success.")) handlePaymentSuccess("SIM_TEST_" + Date.now());
         return;
     }
-
     const options = {
         key: key, 
-        amount: 2500, // 25 INR
+        amount: 2500,
         currency: "INR",
         name: "JobHero AI",
         description: "Elite Day Pass (24 Hours)",
         handler: function (response: any) { handlePaymentSuccess(response.razorpay_payment_id); },
-        prefill: {
-            name: userInput.fullName,
-            email: userInput.email,
-            contact: userInput.phone
-        },
+        prefill: { name: userInput.fullName, email: userInput.email, contact: userInput.phone },
         theme: { color: "#F59E0B" }
     };
     const rzp1 = new window.Razorpay(options);
@@ -403,7 +517,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       setIsAnalyzing(true);
       setLocalError(null);
       try {
-          const result = await analyzeResume(toolkit.resume, userInput.jobRoleTarget);
+          const result = await analyzeResume(currentResumeContent, userInput.jobRoleTarget);
           setResumeAnalysis(result);
       } catch (e) {
           setLocalError("Unable to complete resume audit. Please check your connection and try again.");
@@ -424,9 +538,43 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           setIsGeneratingElite(false);
       }
   };
+  
+  const handleFindInternships = async () => {
+      setIsFinding(true);
+      setLocalError(null);
+      try {
+          const data = await generateInternshipFinder(userInput, currentResumeContent);
+          onUpdateToolkit({ internshipHunter: data });
+      } catch (e: any) {
+          setLocalError(e.message || "Failed to find internships.");
+      } finally {
+          setIsFinding(false);
+      }
+  };
+  
+  const handleGenerateNewVersion = async (role: string) => {
+      if (!role.trim()) return;
+      setIsGeneratingVersion(true);
+      setLocalError(null);
+      try {
+          const newResumeText = await generateTargetedResume(userInput, role);
+          const newVersion: ResumeVersion = {
+              id: `v${Date.now()}`,
+              role: role,
+              content: newResumeText,
+              timestamp: Date.now()
+          };
+          setResumeVersions(prev => [...prev, newVersion]);
+          setActiveVersionId(newVersion.id);
+      } catch (e: any) {
+          setLocalError(e.message || "Failed to generate new resume version.");
+      } finally {
+          setIsGeneratingVersion(false);
+      }
+  };
 
   const handleGenerateShareLink = () => {
-      const payload = { r: toolkit.resume, t: selectedTemplate, n: userInput.fullName, e: userInput.email, p: userInput.phone, l: userInput.linkedinGithub || "" };
+      const payload = { r: currentResumeContent, t: selectedTemplate, n: userInput.fullName, e: userInput.email, p: userInput.phone, l: userInput.linkedinGithub || "" };
       const shareUrl = `${window.location.origin}${window.location.pathname}?shareData=${btoa(encodeURIComponent(JSON.stringify(payload)))}`;
       navigator.clipboard.writeText(shareUrl);
   };
@@ -434,11 +582,9 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   const handleDownloadPDF = (type: 'resume' | 'coverLetter') => {
     const isProTemplate = selectedTemplate === 'Elegant' || selectedTemplate === 'Executive';
     if (!isProMember && isProTemplate) { handleRazorpayPayment(); return; }
-
     const doc = new jsPDF();
-    const content = type === 'resume' ? toolkit.resume : toolkit.coverLetter;
-    const cleanText = content.replace(/[^\x00-\x7F\n\r\t•\-.,()@:/]/g, " "); // Simple ASCII clean
-    
+    const content = type === 'resume' ? currentResumeContent : toolkit.coverLetter;
+    const cleanText = content.replace(/[^\x00-\x7F\n\r\t•\-.,()@:/]/g, " ");
     doc.setFontSize(11);
     const lines = doc.splitTextToSize(cleanText, 180);
     doc.text(lines, 15, 15);
@@ -454,34 +600,39 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       await onRegenerateRoadmap(newRoleInput, useThinkingModel);
       setNewRoleInput('');
     } catch (error) {
-       // Error is handled in App.tsx via setError, but we catch it here to stop loading state
        console.error("Roadmap update failed in view");
     } finally {
       setIsRegeneratingRoadmap(false);
     }
   };
 
-  const handleToggleThinkingModel = () => {
-      setUseThinkingModel(!useThinkingModel);
+  const handleGetFeedback = async (index: number, question: string) => {
+    const answer = interviewAnswers[index];
+    if (!answer?.trim()) return;
+    
+    setEvaluatingIndex(index);
+    try {
+        const feedback = await evaluateInterviewAnswer(question, answer, userInput.jobRoleTarget);
+        setInterviewFeedback(prev => ({...prev, [index]: feedback}));
+    } catch (e) {
+        setLocalError("Failed to get feedback. Please try again.");
+    } finally {
+        setEvaluatingIndex(null);
+    }
   };
 
-  const handleToggleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleToggleThinkingModel();
-      }
-  };
-
+  const handleToggleThinkingModel = () => { setUseThinkingModel(!useThinkingModel); };
+  const handleToggleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleThinkingModel(); } };
   const handleCopyHeadline = (headline: string, index: number) => {
       navigator.clipboard.writeText(headline).then(() => {
           setCopiedHeadlineIndex(index);
-          setCurrentHeadline(headline); // Update the preview as well
+          setCurrentHeadline(headline);
           setTimeout(() => setCopiedHeadlineIndex(null), 2000);
       });
   };
 
   const contentToCopy = (tab: Tab): string => {
-    if (tab === 'resume') return toolkit.resume;
+    if (tab === 'resume') return currentResumeContent;
     if (tab === 'coverLetter') return toolkit.coverLetter;
     if (tab === 'linkedin') return `${currentHeadline}\n\n${toolkit.linkedin.bio}`;
     if (tab === 'interview') return toolkit.mockInterview.questions.map(q => q.question).join('\n');
@@ -489,8 +640,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
     return '';
   };
 
-  // Check if Elite content exists
   const hasEliteContent = toolkit.coldEmail && toolkit.salaryNegotiation;
+  const templateOptions: TemplateType[] = ['Classic', 'Modern', 'Creative', 'Elegant', 'Executive'];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -535,35 +686,43 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
 
         {activeTab === 'resume' && (
             <>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="mb-8">
                      <ActionButtons textToCopy={contentToCopy('resume')} onDownloadPDF={() => handleDownloadPDF('resume')} onShare={handleGenerateShareLink}
                         templateSelector={
-                           <div className="flex flex-col items-end gap-1">
-                               <div className="flex items-center bg-white dark:bg-slate-700 rounded-lg border px-2 py-1">
-                                   <span className="text-xs font-semibold mr-2 text-slate-700 dark:text-slate-300">TEMPLATE:</span>
-                                   <select value={selectedTemplate} onChange={(e) => setSelectedTemplate(e.target.value as TemplateType)} className="text-xs border-none bg-transparent outline-none cursor-pointer text-slate-900 dark:text-white">
-                                       <option value="Classic" className="text-slate-900">Classic</option>
-                                       <option value="Modern" className="text-slate-900">Modern</option>
-                                       <option value="Creative" className="text-slate-900">Creative</option>
-                                       <option value="Elegant" className="text-slate-900">Elegant {isProMember ? '' : '👑'}</option>
-                                       <option value="Executive" className="text-slate-900">Executive {isProMember ? '' : '👑'}</option>
-                                   </select>
-                               </div>
-                               {(!isProMember && (selectedTemplate === 'Elegant' || selectedTemplate === 'Executive')) && (
-                                    <div 
-                                        className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 cursor-pointer hover:underline"
-                                        onClick={handleRazorpayPayment}
-                                    >
-                                        <span>🔒 Previewing Premium. Tap to Unlock.</span>
-                                    </div>
-                               )}
+                           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+                               {templateOptions.map(t => {
+                                   const isLocked = !isProMember && (t === 'Elegant' || t === 'Executive');
+                                   return (
+                                       <TemplateCard 
+                                           key={t}
+                                           type={t}
+                                           isSelected={selectedTemplate === t}
+                                           isLocked={isLocked}
+                                           onClick={() => {
+                                               if (isLocked) handleRazorpayPayment();
+                                               else setSelectedTemplate(t);
+                                           }}
+                                       />
+                                   );
+                               })}
                            </div>
                         }
                     />
                 </div>
                 
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-100/50 dark:bg-slate-900/50 p-1 sm:p-4 shadow-inner mb-10">
-                     <ResumePreview text={toolkit.resume} template={selectedTemplate} isBlurred={!isProMember && (selectedTemplate === 'Elegant' || selectedTemplate === 'Executive')} onUnlock={handleRazorpayPayment} userInput={userInput} />
+                     <ResumePreview 
+                        text={currentResumeContent} 
+                        template={selectedTemplate} 
+                        isBlurred={!isProMember && (selectedTemplate === 'Elegant' || selectedTemplate === 'Executive')} 
+                        onUnlock={handleRazorpayPayment} 
+                        userInput={userInput}
+                        versions={resumeVersions}
+                        activeVersionId={activeVersionId}
+                        onVersionChange={setActiveVersionId}
+                        onCreateVersion={handleGenerateNewVersion}
+                        isGeneratingVersion={isGeneratingVersion}
+                     />
                 </div>
                 
                 {/* ATS Analysis Section - Available for Everyone */}
@@ -588,22 +747,24 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                         {resumeAnalysis ? (
                             <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                                         <div className="text-center">
-                                             <div className={`text-4xl font-black ${resumeAnalysis.score >= 80 ? 'text-green-600' : resumeAnalysis.score >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{resumeAnalysis.score ?? 0}</div>
-                                             <div className="text-xs font-bold text-slate-400">ATS Score</div>
+                                    <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                                         <div className="flex flex-col items-center flex-1 border-r border-slate-100 dark:border-slate-700">
+                                             <CircularProgress score={resumeAnalysis.score ?? 0} size={120} strokeWidth={10} />
                                          </div>
-                                         <div className="text-center">
-                                             <div className={`text-xl font-bold ${resumeAnalysis.jobFitPrediction === 'High' ? 'text-green-600' : 'text-slate-600 dark:text-slate-400'}`}>{resumeAnalysis.jobFitPrediction ?? "N/A"}</div>
-                                             <div className="text-xs font-bold text-slate-400">Fit Prediction</div>
+                                         <div className="text-center flex-1">
+                                             <div className={`text-2xl font-bold ${resumeAnalysis.jobFitPrediction === 'High' ? 'text-green-600' : 'text-slate-600 dark:text-slate-400'}`}>{resumeAnalysis.jobFitPrediction ?? "N/A"}</div>
+                                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Fit Prediction</div>
                                          </div>
                                     </div>
                                     <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/50">
-                                        <h4 className="font-bold text-red-900 dark:text-red-300 text-sm mb-2">Missing Keywords</h4>
+                                        <h4 className="font-bold text-red-900 dark:text-red-300 text-sm mb-3 flex items-center gap-2">
+                                            <span className="bg-red-200 dark:bg-red-800/50 text-red-700 dark:text-red-200 px-1.5 rounded text-[10px]">CRITICAL</span> 
+                                            Missing Keywords
+                                        </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {resumeAnalysis.missingKeywords?.length > 0 ? resumeAnalysis.missingKeywords.map((k, i) => (
-                                                <span key={i} className="px-2 py-1 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs rounded-md">{k}</span>
-                                            )) : <span className="text-xs text-slate-500 dark:text-slate-400">None detected.</span>}
+                                                <span key={i} className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-medium rounded-md shadow-sm">{k}</span>
+                                            )) : <span className="text-xs text-slate-500 dark:text-slate-400">None detected. Great job!</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -624,8 +785,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             </>
         )}
 
-        {/* Other Tabs (CoverLetter, LinkedIn, Interview, Roadmap) remain same as before, no changes needed inside them */}
-
+        {/* ... (Other tabs: CoverLetter, LinkedIn, Interview, Roadmap - no changes) */}
+        
         {activeTab === 'coverLetter' && (
             <>
                 <ActionButtons textToCopy={contentToCopy('coverLetter')} onDownloadPDF={() => handleDownloadPDF('coverLetter')} />
@@ -681,17 +842,53 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             </div>
             {toolkit.mockInterview.questions.map((item, index) => (
                 <div key={index} className="p-6 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800/50 hover:shadow-md transition-shadow">
-                  <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-500 shrink-0">{index + 1}</div>
-                      <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-lg mb-2">{item.question}</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border-l-2 border-green-500">
-                              💡 {item.feedback}
-                          </p>
+                  <div className="flex flex-col gap-4">
+                      <div className="flex gap-4">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-500 shrink-0">{index + 1}</div>
+                        <div className="w-full">
+                            <p className="font-bold text-slate-900 dark:text-white text-lg mb-2">{item.question}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border-l-2 border-green-500 mb-4">
+                                💡 General Tip: {item.feedback}
+                            </p>
+                            
+                            <textarea 
+                                placeholder="Type your answer here to get specific AI feedback..."
+                                className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y min-h-[100px]"
+                                value={interviewAnswers[index] || ''}
+                                onChange={(e) => setInterviewAnswers({...interviewAnswers, [index]: e.target.value})}
+                            />
+                            
+                            <div className="flex justify-end mt-2">
+                                <button 
+                                    onClick={() => handleGetFeedback(index, item.question)}
+                                    disabled={!interviewAnswers[index]?.trim() || evaluatingIndex === index}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {evaluatingIndex === index ? (
+                                        <span className="flex items-center gap-2">
+                                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                            Analyzing...
+                                        </span>
+                                    ) : 'Get AI Feedback'}
+                                </button>
+                            </div>
+
+                            {interviewFeedback[index] && (
+                                <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/50 animate-in fade-in slide-in-from-top-2">
+                                    <h4 className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase mb-2">AI Coach Feedback</h4>
+                                    <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                                        {interviewFeedback[index]}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                       </div>
                   </div>
                 </div>
             ))}
+            <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 text-sm text-center">
+                {toolkit.mockInterview.outro}
+            </div>
           </div>
         )}
 
@@ -735,6 +932,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             <div className="space-y-8">
                 {isProMember ? (
                     <div className="animate-in fade-in duration-500">
+                        {/* Elite Pass Badge */}
                         <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden">
                              <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-amber-400/10 rounded-full blur-xl"></div>
                              <div className="flex items-center gap-3 relative z-10">
@@ -748,16 +946,25 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                      <p className="text-xs text-slate-500 dark:text-slate-400">Premium tools unlocked.</p>
                                  </div>
                              </div>
-                             <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 relative z-10">
-                                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expires in</span>
-                                  <span className="font-mono text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{timeRemaining}</span>
+                             
+                             <div className="flex flex-col items-end gap-2 relative z-10 min-w-[200px]">
+                                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 w-full justify-between">
+                                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expires in</span>
+                                      <span className="font-mono text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{timeRemaining}</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-linear" 
+                                        style={{ width: `${progressRemaining}%` }}
+                                    ></div>
+                                </div>
                              </div>
                         </div>
 
                         {!hasEliteContent ? (
                              <div className="text-center py-12">
                                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Initialize Elite Strategy Engine</h3>
-                                 <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">Generate personalized cold emails, salary scripts, and recruiter psychological profiles.</p>
+                                 <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">Generate personalized cold emails, salary scripts, internship strategies, and recruiter psychological profiles.</p>
                                  <button 
                                     onClick={handleGenerateEliteTools} 
                                     disabled={isGeneratingElite}
@@ -789,72 +996,104 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                                     </div>
                                 </div>
 
-                                {/* Internship & Hackathon Hunter */}
-                                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-100">
-                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                                        <span className="text-2xl">🕵️‍♂️</span> Internship & Hackathon Hunter
-                                    </h3>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div>
-                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Copy-Paste Search Strings</h4>
-                                            <div className="space-y-3">
-                                                {toolkit.internshipHunter?.searchQueries?.map((query, i) => (
-                                                    <div key={i} className="group relative">
-                                                        <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate pr-10">
-                                                            {query}
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => navigator.clipboard.writeText(query)}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 font-bold text-xs bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            COPY
-                                                        </button>
-                                                    </div>
-                                                )) || <p className="text-sm text-slate-500">No queries generated.</p>}
+                                {/* Networking Power Pack Grid */}
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                    <span className="text-xl">⚡</span> Networking Power Pack
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-100">
+                                    {[
+                                        { title: "📧 Founder Cold Email", content: toolkit.coldEmail, color: "from-blue-600 to-indigo-600" },
+                                        { title: "🤝 HR / Recruiter Email", content: toolkit.hrEmail, color: "from-indigo-600 to-purple-600" },
+                                        { title: "💼 LinkedIn Pitch", content: toolkit.linkedinPitch, color: "from-sky-600 to-blue-600" },
+                                        { title: "🔄 Follow-Up Message", content: toolkit.followUpEmail, color: "from-slate-600 to-slate-800" },
+                                        { title: "👥 Referral Request", content: toolkit.referralEmail, color: "from-teal-600 to-emerald-600" },
+                                        { title: "💰 Salary Negotiation", content: toolkit.salaryNegotiation, color: "from-green-600 to-emerald-600" },
+                                    ].map((item, i) => (
+                                        <div key={i} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+                                            <div className={`bg-gradient-to-r ${item.color} p-3 text-white font-bold flex justify-between items-center`}>
+                                                <span className="text-sm truncate mr-2">{item.title}</span>
+                                                <button onClick={() => navigator.clipboard.writeText(item.content || "")} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors whitespace-nowrap">Copy</button>
+                                            </div>
+                                            <div className="p-4 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-xs leading-relaxed flex-grow">
+                                                {item.content || "Generating..."}
                                             </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Target Platforms & Strategy</h4>
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {toolkit.internshipHunter?.platforms?.map((platform, i) => (
-                                                    <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-100 dark:border-blue-800">
-                                                        {platform}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-800">
-                                                <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">🔥 THE WINNING HACK</p>
-                                                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                                                    {toolkit.internshipHunter?.strategy || "No strategy available."}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-2 delay-200">
-                                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white font-bold flex justify-between">
-                                            <span>📧 Cold Email</span>
-                                            <button onClick={() => navigator.clipboard.writeText(toolkit.coldEmail || "")} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+                                {/* Internship & Hackathon Hunter Section (Moved from Finder Tab) */}
+                                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 mb-8 animate-in fade-in slide-in-from-bottom-2 delay-200 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                                    
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 relative z-10">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                                <SearchIcon className="w-6 h-6 text-blue-600" />
+                                                Internship & Hackathon Hunter
+                                            </h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                AI-generated search strings and hacks to find hidden opportunities.
+                                            </p>
                                         </div>
-                                        <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                            {toolkit.coldEmail}
-                                        </div>
+                                        <button 
+                                            onClick={handleFindInternships} 
+                                            disabled={isFinding}
+                                            className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+                                        >
+                                            {isFinding ? 'Hunting...' : toolkit.internshipHunter ? 'Regenerate Strategy' : 'Launch Hunter'}
+                                        </button>
                                     </div>
-                                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white font-bold flex justify-between">
-                                            <span>💰 Salary Negotiation</span>
-                                            <button onClick={() => navigator.clipboard.writeText(toolkit.salaryNegotiation || "")} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Copy</button>
+
+                                    {!toolkit.internshipHunter ? (
+                                        <div className="text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                                            <p className="text-sm text-slate-500 mb-2">Unlock hidden internships and hackathons tailored to your profile.</p>
+                                            <button onClick={handleFindInternships} className="text-blue-600 font-bold hover:underline text-sm">Click "Launch Hunter" to start</button>
                                         </div>
-                                        <div className="p-6 whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                            {toolkit.salaryNegotiation}
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Copy-Paste Search Strings</h4>
+                                                <div className="space-y-3">
+                                                    {toolkit.internshipHunter?.searchQueries?.map((query, i) => (
+                                                        <a 
+                                                            key={i} 
+                                                            href={`https://www.google.com/search?q=${encodeURIComponent(query)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="block group relative"
+                                                        >
+                                                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors pr-8 truncate">
+                                                                {query}
+                                                            </div>
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">
+                                                                GO ↗
+                                                            </div>
+                                                        </a>
+                                                    )) || <p className="text-sm text-slate-500">No queries generated.</p>}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Target Platforms & Strategy</h4>
+                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                    {toolkit.internshipHunter?.platforms?.map((platform, i) => (
+                                                        <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold uppercase rounded-full border border-blue-100 dark:border-blue-800">
+                                                            {platform}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-800">
+                                                    <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">🔥 THE WINNING HACK</p>
+                                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                                        {toolkit.internshipHunter?.strategy || "No strategy available."}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
-                                <div className="text-center text-slate-400 text-xs mt-8">
-                                    These tools are generated based on your profile and target role to maximize conversion.
+
+                                <div className="text-center text-slate-400 text-xs mt-8 pb-4">
+                                    These premium tools are generated based on your specific profile to maximize conversion rates.
                                 </div>
                             </>
                         )}
@@ -863,7 +1102,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                    <div className="flex flex-col items-center justify-center py-16 text-center">
                        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl mb-6">🔒</div>
                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Elite Tools Locked</h2>
-                       <p className="text-slate-500 max-w-md mb-8">Get access to <strong>Recruiter Psychology</strong>, <strong>Hidden Internship Search Strings</strong>, <strong>Cold Emails</strong>, and more.</p>
+                       <p className="text-slate-500 max-w-md mb-8">Get access to <strong>Recruiter Psychology</strong>, <strong>Hidden Internship Search Strings</strong>, <strong>Cold Emails</strong>, <strong>LinkedIn Pitches</strong> and more.</p>
                        <button onClick={handleRazorpayPayment} className="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-transform">
                            Unlock 24 Hours - ₹25
                        </button>
