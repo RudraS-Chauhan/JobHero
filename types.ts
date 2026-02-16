@@ -16,7 +16,6 @@ export interface UserInput {
   whyThisRole: string;
   interests: string;
   currentYear: string;
-  // New fields
   projectLink?: string;
   customCSS?: string;
 }
@@ -27,8 +26,9 @@ export interface RoadmapStep {
   title: string;
   description: string;
   tools: string[];
-  // New backbone fields
   milestones: string[];
+  weeklyBreakdown?: string[];
+  depthLevel: 'Foundational' | 'Intermediate' | 'Elite';
   resources: { title: string; type: 'Course' | 'Book' | 'Tool'; link?: string }[];
 }
 
@@ -45,6 +45,12 @@ export interface JobToolkit {
     headline: string;
     alternativeHeadlines: string[];
     bio: string;
+    structuredBio?: {
+        hook: string;
+        expertise: string;
+        impact: string;
+        cta: string;
+    };
   };
   mockInterview: {
     intro: string;
@@ -55,10 +61,9 @@ export interface JobToolkit {
     outro: string;
   };
   careerRoadmap: RoadmapStep[];
-  // Elite / Premium Tools
   recruiterPsychology?: string;
   salaryNegotiation?: string;
-  coldEmail?: string; // Founder/General
+  coldEmail?: string;
   hrEmail?: string;
   linkedinPitch?: string;
   followUpEmail?: string;
