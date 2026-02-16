@@ -158,6 +158,21 @@ const extractJson = (text: string): string => {
   return text.substring(startIndex, endIndex + 1);
 };
 
+// Helper function to safely retrieve API Key from either process.env or import.meta.env
+const getApiKey = (): string | undefined => {
+    // Priority 1: process.env (Standard/Polyfilled)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        return process.env.API_KEY;
+    }
+    // Priority 2: import.meta.env (Vite native)
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+        // @ts-ignore
+        return import.meta.env.VITE_API_KEY;
+    }
+    return undefined;
+};
+
 // Helper function to retry with a fallback model if the primary fails
 const generateWithFallback = async (
     primaryModel: string, 
@@ -165,13 +180,13 @@ const generateWithFallback = async (
     contents: string, 
     config: any
 ) => {
-    // CRITICAL: Explicit check for API Key to prevent "An API Key must be set" error crash
-    // This allows the App.tsx error boundary to catch and display the "Configuration Error" UI
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+
+    if (!apiKey) {
         throw new Error("API Key is missing (401). Please check your .env configuration.");
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     try {
         const response = await ai.models.generateContent({
