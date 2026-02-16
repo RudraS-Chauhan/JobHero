@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from "jspdf";
 import { JobToolkit, ResumeAnalysis, UserInput, ResumeVersion } from '../types';
-import { analyzeResume, generateEliteTools, generateTargetedResume, evaluateInterviewAnswer, generateInternshipFinder } from '../services/geminiService';
+import { analyzeResume, generateEliteTools, generateTargetedResume, evaluateInterviewAnswer, generateInternshipFinder, regenerateLinkedInBio } from '../services/geminiService';
 import { ResumePreview, TemplateType } from './ResumePreview';
 import { ResumeIcon } from './icons/ResumeIcon';
 import { CoverLetterIcon } from './icons/CoverLetterIcon';
@@ -91,10 +91,10 @@ const CircularProgress = ({ score, size = 100, strokeWidth = 8 }: { score: numbe
     );
 };
 
+// ... (TemplateCard component remains the same)
 const TemplateCard: React.FC<{ type: TemplateType, isSelected: boolean, isLocked: boolean, onClick: () => void }> = ({ type, isSelected, isLocked, onClick }) => {
     let previewContent;
-    
-    // CSS-based mini previews
+    // ... (same as before)
     if (type === 'Classic') {
         previewContent = (
             <div className="flex flex-col gap-1 p-2 h-full bg-white text-[4px] leading-tight font-serif text-slate-800">
@@ -174,6 +174,7 @@ const TemplateCard: React.FC<{ type: TemplateType, isSelected: boolean, isLocked
     );
 };
 
+// ... (AnalysisList, FormatCoverLetter, RoadmapStepItem, SuccessModal, ActionButtons, ProUpsellCard remain the same)
 const AnalysisList = ({ title, items, type }: { title: string, items: string[], type: 'strength' | 'improvement' }) => (
     <div className={`p-4 rounded-xl border h-full ${type === 'strength' ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30'}`}>
         <h4 className={`font-bold text-sm mb-3 flex items-center gap-2 ${type === 'strength' ? 'text-green-800 dark:text-green-400' : 'text-amber-800 dark:text-amber-400'}`}>
@@ -447,7 +448,8 @@ const ProUpsellCard: React.FC<{ description: string; onUnlock: () => void }> = (
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onReset, onRegenerateRoadmap, onUpdateToolkit }) => {
   const [activeTab, setActiveTab] = useState<Tab>('resume');
-  const [newRoleInput, setNewRoleInput] = useState('');
+  // Initialize with current role to allow easy regeneration without re-typing
+  const [newRoleInput, setNewRoleInput] = useState(userInput.jobRoleTarget || '');
   const [isRegeneratingRoadmap, setIsRegeneratingRoadmap] = useState(false);
   const [useThinkingModel, setUseThinkingModel] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('Classic');
@@ -462,6 +464,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   const [progressRemaining, setProgressRemaining] = useState<number>(0);
   const [copiedBio, setCopiedBio] = useState(false);
   
+  // Bio State for "Interactive" regeneration
+  const [currentBio, setCurrentBio] = useState(toolkit.linkedin.bio);
+  const [bioTone, setBioTone] = useState<'Professional' | 'Storyteller' | 'Executive'>('Professional');
+  const [isRegeneratingBio, setIsRegeneratingBio] = useState(false);
+
   // Finder Tab State
   const [isFinding, setIsFinding] = useState(false);
 
@@ -655,14 +662,16 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
     doc.save(`${type}_JobHero.pdf`);
   };
 
-  const handleRoadmapUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRoleInput.trim()) return;
+  const handleRoadmapUpdate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    // Allow empty input to trigger default (current role) regeneration
+    const roleToUse = newRoleInput.trim() || userInput.jobRoleTarget;
+    
     setIsRegeneratingRoadmap(true);
     setLocalError(null);
     try {
-      await onRegenerateRoadmap(newRoleInput, useThinkingModel);
-      setNewRoleInput('');
+      await onRegenerateRoadmap(roleToUse, useThinkingModel);
+      // Don't clear input so user sees what they generated for
     } catch (error) {
        console.error("Roadmap update failed in view");
     } finally {
@@ -686,7 +695,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   };
   
   const handleCopyBio = () => {
-      navigator.clipboard.writeText(toolkit.linkedin.bio).then(() => {
+      navigator.clipboard.writeText(currentBio).then(() => {
           setCopiedBio(true);
           setTimeout(() => setCopiedBio(false), 2000);
       });
@@ -702,10 +711,23 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       });
   };
 
+  const handleRegenerateBio = async () => {
+      setIsRegeneratingBio(true);
+      setLocalError(null);
+      try {
+          const newBio = await regenerateLinkedInBio(currentBio, bioTone);
+          setCurrentBio(newBio);
+      } catch (e: any) {
+          setLocalError(e.message || "Failed to update bio");
+      } finally {
+          setIsRegeneratingBio(false);
+      }
+  };
+
   const contentToCopy = (tab: Tab): string => {
     if (tab === 'resume') return currentResumeContent;
     if (tab === 'coverLetter') return toolkit.coverLetter;
-    if (tab === 'linkedin') return `${currentHeadline}\n\n${toolkit.linkedin.bio}`;
+    if (tab === 'linkedin') return `${currentHeadline}\n\n${currentBio}`;
     if (tab === 'interview') return toolkit.mockInterview.questions.map(q => q.question).join('\n');
     if (tab === 'elite') return `${toolkit.coldEmail || ''}\n\n${toolkit.salaryNegotiation || ''}`;
     return '';
@@ -716,8 +738,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* ... (Error display remains same) ... */}
       {showSuccessModal && <SuccessModal email={userInput.email} transactionId={transactionId} />}
       
+      {/* ... (Tabs and header remain same) ... */}
       <div className="flex flex-col sm:flex-row justify-between items-end gap-4 mb-0 px-4 sm:px-0">
         <div className="flex space-x-1 overflow-x-auto no-scrollbar w-full sm:w-auto">
           {tabs.map((tab) => (
@@ -736,7 +760,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           ))}
         </div>
         <div className="flex gap-2">
-            {isProMember && <span className="px-3 py-2 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200 text-xs font-bold rounded-full flex items-center gap-1"><span>👑</span> ELITE PASS {timeRemaining && <span className="font-mono ml-1">({timeRemaining})</span>}</span>}
+            {isProMember && <span className="px-3 py-2 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200 text-xs font-bold rounded-full flex items-center gap-1 animate-pulse"><span>👑</span> ELITE PASS {timeRemaining && <span className="font-mono ml-1">({timeRemaining})</span>}</span>}
             <button onClick={onReset} className="px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:text-red-500">
                 <RefreshIcon className="h-4 w-4 inline mr-2" />Start Over
             </button>
@@ -796,7 +820,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                      />
                 </div>
                 
-                {/* ATS Analysis Section - Available for Everyone */}
+                {/* ATS Analysis Section */}
                 <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 relative z-10">
                             <div>
@@ -856,8 +880,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             </>
         )}
 
-        {/* ... (Other tabs: CoverLetter, LinkedIn, Interview - no changes) */}
-        
         {activeTab === 'coverLetter' && (
             <>
                 <ActionButtons textToCopy={contentToCopy('coverLetter')} onDownloadPDF={() => handleDownloadPDF('coverLetter')} />
@@ -873,7 +895,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
                 <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Optimized Headline</h3>
                 <p className="text-lg font-bold text-slate-900 dark:text-white mb-4">{currentHeadline}</p>
-                
                 {toolkit.linkedin.alternativeHeadlines && toolkit.linkedin.alternativeHeadlines.length > 0 && (
                     <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
                         <p className="text-xs font-semibold text-slate-500 mb-3">AI Suggestions (Click to copy):</p>
@@ -898,22 +919,58 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     </div>
                 )}
             </div>
+            
+            {/* Interactive Bio Section */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700 relative group">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase">About Section</h3>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase">About Section (Bio)</h3>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={handleCopyBio}
+                            className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
+                        >
+                             {copiedBio ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                             {copiedBio ? 'Copied' : 'Copy'}
+                        </button>
+                    </div>
+                </div>
+                
+                <textarea 
+                    className="w-full h-48 p-4 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-300 leading-relaxed resize-y focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 dark:bg-slate-950 text-sm font-sans mb-4"
+                    value={currentBio}
+                    onChange={(e) => setCurrentBio(e.target.value)}
+                />
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Refine Tone:</span>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        {(['Professional', 'Storyteller', 'Executive'] as const).map(tone => (
+                            <button
+                                key={tone}
+                                onClick={() => setBioTone(tone)}
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors flex-1 sm:flex-none ${
+                                    bioTone === tone 
+                                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800' 
+                                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}
+                            >
+                                {tone}
+                            </button>
+                        ))}
+                    </div>
                     <button 
-                        onClick={handleCopyBio}
-                        className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
+                        onClick={handleRegenerateBio}
+                        disabled={isRegeneratingBio}
+                        className="w-full sm:w-auto ml-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors disabled:opacity-50"
                     >
-                         {copiedBio ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <CopyIcon className="w-3.5 h-3.5" />}
-                         {copiedBio ? 'Copied' : 'Copy'}
+                        {isRegeneratingBio ? 'Updating...' : 'Regenerate Bio'}
                     </button>
                 </div>
-                <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">{toolkit.linkedin.bio}</p>
             </div>
           </div>
         )}
 
+        {/* ... (rest of the tabs remain same) ... */}
         {activeTab === 'interview' && (
           <div className="space-y-6">
             <ActionButtons textToCopy={contentToCopy('interview')} />
@@ -972,6 +1029,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           </div>
         )}
 
+        {/* ... (Roadmap and Elite tabs remain same) ... */}
         {activeTab === 'roadmap' && (
           <div className="space-y-8">
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50 flex flex-col sm:flex-row gap-4 items-end">
@@ -993,7 +1051,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     </div>
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Deep Think</span>
                 </div>
-                <button onClick={handleRoadmapUpdate} disabled={isRegeneratingRoadmap} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-bold disabled:opacity-50 hover:bg-blue-700 transition-colors">
+                <button onClick={(e) => handleRoadmapUpdate(e)} disabled={isRegeneratingRoadmap} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-bold disabled:opacity-50 hover:bg-blue-700 transition-colors">
                     {isRegeneratingRoadmap ? 'Thinking...' : 'Regenerate'}
                 </button>
             </div>
@@ -1012,13 +1070,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                         isPro={isProMember}
                     />
                 )) : (
-                    <div className="p-4 bg-red-50 text-red-600 rounded">Legacy roadmap format. Please regenerate.</div>
+                    <div className="p-8 border-2 border-dashed border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10 rounded-xl text-center">
+                        <p className="text-red-600 dark:text-red-400 mb-4 font-medium">Roadmap format unavailable for this role.</p>
+                        <button 
+                            onClick={() => handleRoadmapUpdate()} 
+                            disabled={isRegeneratingRoadmap}
+                            className="px-6 py-2 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-bold rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shadow-sm"
+                        >
+                            {isRegeneratingRoadmap ? 'Generating...' : '↻ Generate Roadmap'}
+                        </button>
+                    </div>
                 )}
             </div>
           </div>
         )}
 
-        {/* ... (Elite tab logic remains the same) ... */}
+        {/* ... (Elite tab remains same) ... */}
         {activeTab === 'elite' && (
             <div className="space-y-8">
                 {isProMember ? (
@@ -1039,13 +1106,13 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                              </div>
                              
                              <div className="flex flex-col items-end gap-2 relative z-10 min-w-[200px]">
-                                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 w-full justify-between">
+                                <div className={`flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow-sm border ${progressRemaining < 10 ? 'border-red-400 dark:border-red-600 animate-pulse' : 'border-slate-200 dark:border-slate-700'} w-full justify-between`}>
                                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expires in</span>
-                                      <span className="font-mono text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{timeRemaining}</span>
+                                      <span className={`font-mono text-xl font-bold tabular-nums ${progressRemaining < 10 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>{timeRemaining}</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                                     <div 
-                                        className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-linear" 
+                                        className={`h-full rounded-full transition-all duration-1000 ease-linear ${progressRemaining < 10 ? 'bg-red-500' : 'bg-amber-500'}`} 
                                         style={{ width: `${progressRemaining}%` }}
                                     ></div>
                                 </div>

@@ -41,7 +41,7 @@ const coreResponseSchema = {
     },
     coverLetter: { 
         type: Type.STRING, 
-        description: "A formal 3-paragraph business cover letter with header. IMPORTANT: You MUST include '[Hiring Manager Name]' and '[Company Address]' in the header section as placeholders." 
+        description: "A formal 3-paragraph business cover letter with header. IMPORTANT: You MUST include '[Date]', '[Hiring Manager Name]', and '[Company Address]' in the header section as placeholders." 
     },
     linkedin: {
       type: Type.OBJECT,
@@ -52,7 +52,7 @@ const coreResponseSchema = {
             items: { type: Type.STRING },
             description: "5 alternative, keyword-optimized headlines." 
         },
-        bio: { type: Type.STRING, description: "A compelling 'About Me' narrative (150-200 words)." },
+        bio: { type: Type.STRING, description: "A highly professional, executive-level 'About Me' narrative (150-200 words) focusing on value proposition and unique strengths." },
       },
     },
     mockInterview: {
@@ -143,6 +143,7 @@ const extractJson = (text: string): string => {
   const endIndex = text.lastIndexOf('}');
   
   if (startIndex === -1) {
+     // Try to find array bracket if object braces aren't found (for roadmap array response)
      const arrayStart = text.indexOf('[');
      const arrayEnd = text.lastIndexOf(']');
      if (arrayStart !== -1 && arrayEnd !== -1) {
@@ -211,11 +212,9 @@ export const generateJobToolkit = async (data: UserInput): Promise<JobToolkit> =
     
     **GOAL**: Create a professional career toolkit that feels bespoke and non-generic.
     
-    **DATA INTEGRITY**: Use ONLY provided details. No hallucinations.
-    
     **CRITICAL GUIDELINES**:
-    1. **Resume**: STRICTLY use standard Markdown Headers (e.g., '### EXPERIENCE') for sections. **EACH SECTION MUST START ON A NEW LINE.** Do NOT use bullet points (•) to separate sections like "SUMMARY • Aspiring...". It must be "### SUMMARY\nAspiring...".
-    2. **Roadmap**: Do NOT give generic advice like "Learn React". Give actionable, specific milestones like "Build a custom Hook for API fetching" or "Read 'Clean Code' by Uncle Bob".
+    1. **Resume**: STRICTLY use standard Markdown Headers (e.g., '### EXPERIENCE') on their own new lines. Do NOT use inline headers or bullet points as separators. Ensure every section (Summary, Education, Skills, Experience, Projects) starts on a NEW LINE.
+    2. **Roadmap**: Create a "Gap Analysis" flowchart. Compare the user's current skills (${data.skills}) with the requirements for the target role (${data.jobRoleTarget}). Define specific, logical phases to bridge this gap. Don't teach them what they already know.
     3. **Mock Interview**: Generate 10 diverse questions ranging from behavioral to advanced technical/system design concepts appropriate for the role.
     4. **Tone**: Authoritative, encouraging, and specific. Avoid robotic phrasing.
 
@@ -276,6 +275,29 @@ export const generateTargetedResume = async (data: UserInput, targetRole: string
   } catch (error: any) {
       throw new Error("Failed to generate targeted resume: " + error.message);
   }
+};
+
+export const regenerateLinkedInBio = async (currentBio: string, tone: 'Professional' | 'Storyteller' | 'Executive'): Promise<string> => {
+    const systemInstruction = `Rewrite the following LinkedIn Bio to match the tone: "${tone}".
+    
+    Tones:
+    - **Professional**: Clean, standard, keyword-rich.
+    - **Storyteller**: Engaging, narrative-driven, personal.
+    - **Executive**: High-level, authoritative, focus on impact and leadership.
+    
+    Output ONLY the new bio text. No markdown formatting.`;
+
+    const config = {
+        temperature: 0.7,
+        systemInstruction: systemInstruction,
+    };
+
+    try {
+        const response = await generateWithFallback("gemini-3-flash-preview", "gemini-flash-lite-latest", `Current Bio: ${currentBio}`, config);
+        return response.text || "";
+    } catch (error: any) {
+        throw new Error("Failed to regenerate bio: " + error.message);
+    }
 };
 
 export const generateEliteTools = async (data: UserInput): Promise<Partial<JobToolkit>> => {
@@ -347,18 +369,25 @@ export const generateInternshipFinder = async (data: UserInput, resumeText: stri
 export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, useThinkingModel: boolean = false): Promise<JobToolkit['careerRoadmap']> => {
   const primaryModel = useThinkingModel ? "gemini-3-pro-preview" : "gemini-3-flash-preview";
   
+  const target = newRole.trim() || data.jobRoleTarget;
+
   const systemInstruction = `
-    Create a highly detailed, non-generic career roadmap to become a "${newRole}" in 2025.
+    You are an expert Technical Career Coach. Create a highly detailed, step-by-step career flowchart roadmap for the user to become a "${target}".
     
-    **REQUIREMENTS**:
-    1. **Milestones**: specific, tangible tasks (e.g., "Deploy a Dockerized App to AWS", NOT "Learn Docker").
-    2. **Resources**: Recommend REAL books (e.g., "Designing Data-Intensive Applications"), REAL courses (e.g., "Frontend Masters"), or specific tools.
-    3. **Tone**: Senior Mentor. Direct and actionable.
+    **GAP ANALYSIS**:
+    1. **Current State**: User currently has these skills: ${data.skills}.
+    2. **Target State**: The role of "${target}" requires specific advanced skills they might lack.
+    3. **The Bridge**: Create phases that specifically bridge this gap. **Do not** recommend basics if the user already lists them in skills. Focus on the delta.
     
-    Return a JSON array of steps.
+    **FORMAT**:
+    - **Phase**: e.g., "Month 1-2: Advanced React Patterns" (Be specific, not just "Learn React").
+    - **Milestones**: 3-4 concrete tasks (e.g. "Deploy a serverless API", "Contribute to 1 Open Source repo").
+    - **Resources**: specific, high-quality books/courses.
+    
+    Return a JSON ARRAY of step objects.
   `;
 
-  const userContent = `Current Skills: ${data.skills}. Target: ${newRole}`;
+  const userContent = `Current Profile: ${data.education}, ${data.yearsOfExperience} YOE. Current Skills: ${data.skills}. Target: ${target}`;
 
   const config: any = {
       responseMimeType: "application/json",
@@ -371,9 +400,18 @@ export const regenerateCareerRoadmap = async (data: UserInput, newRole: string, 
   try {
     const response = await generateWithFallback(primaryModel, "gemini-3-flash-preview", userContent, config);
     const jsonText = extractJson(response.text || "[]");
-    return JSON.parse(jsonText);
-  } catch (error) {
-    throw new Error("Failed to regenerate roadmap.");
+    const parsed = JSON.parse(jsonText);
+    
+    // Robust parsing: sometimes the model wraps the array in an object key like "careerRoadmap"
+    if (!Array.isArray(parsed) && typeof parsed === 'object') {
+        const values = Object.values(parsed);
+        const arrayValue = values.find(v => Array.isArray(v));
+        if (arrayValue) return arrayValue as JobToolkit['careerRoadmap'];
+    }
+    
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error: any) {
+    throw new Error("Failed to regenerate roadmap: " + error.message);
   }
 };
 
