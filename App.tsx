@@ -24,7 +24,7 @@ const AboutModal = ({ onClose }: { onClose: () => void }) => {
             return;
         }
         setValidationMsg("");
-        window.location.href = `mailto:rudrasinghchauhan2007@gmail.com?subject=JobHero AI Inquiry&body=Contact Email: ${contactEmail}`;
+        window.location.href = `mailto:rudrasinghchauhan2007@gmail.com?subject=AtlasCV Inquiry&body=Contact Email: ${contactEmail}`;
     };
 
     return (
@@ -172,7 +172,7 @@ const App: React.FC = () => {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { if(!isLoading) { setToolkit(null); setUserInput(null); } }}>
             <div className="bg-blue-600 p-1.5 rounded-xl"><LogoIcon className="h-6 w-6 text-white" /></div>
-            <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white">JobHero<span className="text-blue-600">.ai</span></h1>
+            <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white">AtlasCV</h1>
           </div>
           <div className="flex items-center gap-4">
             <button onClick={() => setShowAbout(true)} className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 transition-colors">About</button>
@@ -234,8 +234,8 @@ const App: React.FC = () => {
       </main>
       
       <footer className="py-12 text-center opacity-40">
-        <p className="text-xs font-black uppercase tracking-[0.3em] mb-2">JobHero System Stable 3.4.0</p>
-        <p className="text-xs font-bold text-slate-400">© 2025 JobHero AI. Lead Engineer Rudra Singh Chauhan.</p>
+        <p className="text-xs font-black uppercase tracking-[0.3em] mb-2">AtlasCV System Stable 3.4.0</p>
+        <p className="text-xs font-bold text-slate-400">© 2025 AtlasCV. Lead Engineer Rudra Singh Chauhan.</p>
       </footer>
     </div>
   );

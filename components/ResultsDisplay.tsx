@@ -261,7 +261,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         const doc = new jsPDF();
         doc.setFontSize(22);
         doc.setTextColor(37, 99, 235);
-        doc.text("JobHero AI", 20, 25);
+        doc.text("AtlasCV", 20, 25);
         doc.setFontSize(10);
         doc.setTextColor(100);
         doc.text("Tax Invoice & Receipt", 20, 32);
@@ -293,7 +293,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         doc.text("Description", 25, 81);
         doc.text("Amount", 165, 81);
         doc.setFont(undefined, 'normal');
-        doc.text("JobHero AI - Elite Strategy Suite (24 Hour Access)", 25, 95);
+        doc.text("AtlasCV - Elite Strategy Suite (24 Hour Access)", 25, 95);
         doc.text("Recruiter Psychology, Salary Scripts, Premium Templates", 25, 100);
         doc.text("INR 29.00", 165, 95);
 
@@ -310,7 +310,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         doc.text(`Transaction ID: ${paymentId}`, 20, 140);
         doc.text("This is a computer generated invoice.", 20, 145);
         
-        doc.save(`JobHero_Invoice_${invoiceNum}.pdf`);
+        doc.save(`AtlasCV_Invoice_${invoiceNum}.pdf`);
         setInvoiceStatus('sent');
         setTimeout(() => setInvoiceStatus('idle'), 6000);
     } catch (e) {
@@ -341,7 +341,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       }
       const options = {
           key: keyId,
-          amount: 2900, currency: "INR", name: "JobHero AI", description: "Unlock Elite Career Tools",
+          amount: 2900, currency: "INR", name: "AtlasCV", description: "Unlock Elite Career Tools",
           handler: (response: any) => { 
             localStorage.setItem('jobHero_pro', 'true'); 
             localStorage.setItem('jobHero_pro_expiry', expiryTime.toString());
