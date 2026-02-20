@@ -129,6 +129,19 @@ const TemplateCard: React.FC<{ type: TemplateType, isSelected: boolean, isLocked
                 </div>
             );
         }
+        if (type === 'Startup') {
+            return (
+                <div className="p-2 h-full opacity-80 bg-slate-50 border-l-2 border-emerald-500">
+                    <div className="w-20 h-3 bg-slate-900 rounded-sm mb-2"></div>
+                    <div className="w-12 h-1 bg-emerald-500 rounded-full mb-2"></div>
+                    <div className="space-y-1.5">
+                        <div className="w-full h-0.5 bg-slate-300"></div>
+                        <div className="w-full h-0.5 bg-slate-300"></div>
+                        <div className="w-full h-0.5 bg-slate-300"></div>
+                    </div>
+                </div>
+            );
+        }
         // Minimalist / Professional default
         return (
             <div className="p-2 space-y-2 opacity-60">
@@ -307,14 +320,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
   };
 
   const handlePayment = () => {
-      // Robust key retrieval for Vite/Vercel
+      // Robust key retrieval checking multiple common patterns
       const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 
                     (window as any).process?.env?.VITE_RAZORPAY_KEY_ID || 
+                    import.meta.env.REACT_APP_RAZORPAY_KEY_ID ||
+                    import.meta.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
                     "";
 
       const expiryTime = Date.now() + 24 * 60 * 60 * 1000;
 
       if (!keyId || keyId === '') {
+          console.warn("Razorpay Key missing. Checked: VITE_RAZORPAY_KEY_ID, REACT_APP_..., NEXT_PUBLIC_...");
           if (confirm("DEV MODE: No Razorpay Key found. Simulate successful payment?")) {
               localStorage.setItem('jobHero_pro', 'true');
               localStorage.setItem('jobHero_pro_expiry', expiryTime.toString());
@@ -564,7 +580,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     </div>
                     {/* Grid Layout - Compact */}
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-4">
-                        {['Classic', 'Modern', 'Minimalist', 'Creative', 'Professional', 'Elegant', 'Executive'].map((t) => (
+                        {['Classic', 'Modern', 'Minimalist', 'Creative', 'Professional', 'Elegant', 'Executive', 'Startup'].map((t) => (
                             <TemplateCard 
                                 key={t} type={t as TemplateType} isSelected={selectedTemplate === t} 
                                 isLocked={isPremium(t as TemplateType) && !isPro} 

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { UserInput, ResumeVersion } from '../types';
 import { TechIcon } from './icons/TechIcons';
 
-export type TemplateType = 'Classic' | 'Modern' | 'Minimalist' | 'Creative' | 'Elegant' | 'Executive' | 'Professional';
+export type TemplateType = 'Classic' | 'Modern' | 'Minimalist' | 'Creative' | 'Elegant' | 'Executive' | 'Professional' | 'Startup';
 
 const parseResume = (text: string) => {
     const sections: Record<string, string> = {};
@@ -124,6 +124,13 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         contactClass = "text-[11px] text-slate-600 mb-6 flex flex-wrap gap-x-4 items-center border-b border-slate-200 pb-4";
         sectionTitleClass = "text-sm font-bold text-slate-900 uppercase tracking-widest mt-6 mb-3 border-b-2 border-slate-900 pb-1 inline-block w-full";
         bodyClass += " text-slate-800 text-[11px] leading-5 text-justify";
+    } else if (template === 'Startup') {
+        // Modern, clean, tech-focused
+        containerClass += " font-mono bg-slate-50 text-slate-800 max-w-[850px] mx-auto border-l-4 border-emerald-500 shadow-lg";
+        nameClass = "text-4xl font-black text-slate-900 mb-2 tracking-tighter";
+        contactClass = "text-[10px] font-bold text-emerald-600 mb-6 flex flex-wrap gap-x-4 uppercase tracking-wider";
+        sectionTitleClass = "text-xs font-black text-slate-900 uppercase tracking-tight mt-6 mb-3 flex items-center gap-2 before:content-['#'] before:text-emerald-500";
+        bodyClass += " text-slate-600 text-[11px] leading-relaxed tracking-tight";
     }
 
     const renderSection = (title: string, contentKey: string) => {
