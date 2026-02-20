@@ -294,15 +294,15 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
         doc.text("Amount", 165, 81);
         doc.setFont(undefined, 'normal');
         doc.text("AtlasCV - Elite Strategy Suite (24 Hour Access)", 25, 95);
-        doc.text("Recruiter Psychology, Salary Scripts, Premium Templates", 25, 100);
-        doc.text("INR 29.00", 165, 95);
+        doc.text("Recruiter Psychology, Salary Scripts, Cold Email Scripts, Premium Templates", 25, 100);
+        doc.text("INR 25.00", 165, 95);
 
         doc.line(20, 110, 190, 110);
         doc.setFont(undefined, 'bold');
         doc.text("Total Paid:", 135, 120);
         doc.setFontSize(14);
         doc.setTextColor(37, 99, 235);
-        doc.text("INR 29.00", 165, 120);
+        doc.text("INR 25.00", 165, 120);
 
         doc.setFontSize(9);
         doc.setTextColor(150);
@@ -341,7 +341,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
       }
       const options = {
           key: keyId,
-          amount: 2900, currency: "INR", name: "AtlasCV", description: "Unlock Elite Career Tools",
+          amount: 2500, currency: "INR", name: "AtlasCV", description: "Unlock Elite Career Tools",
           handler: (response: any) => { 
             localStorage.setItem('jobHero_pro', 'true'); 
             localStorage.setItem('jobHero_pro_expiry', expiryTime.toString());
@@ -595,69 +595,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     <ResumePreview text={toolkit.resume} template={selectedTemplate} userInput={userInput} isBlurred={isPremium(selectedTemplate) && !isPro} onUnlock={handlePayment} />
                 </div>
 
-                {/* 3. ATS Strategy Lab */}
-                <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden mt-2">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        <div>
-                            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                <SearchIcon className="w-5 h-5 text-blue-600" /> ATS Neural Scan & Deep Audit
-                            </h3>
-                            <p className="text-xs text-slate-500 font-medium mt-1">Professional-grade analysis against target role requirements.</p>
-                        </div>
-                        <button onClick={runAnalysis} disabled={isAnalyzing} className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
-                            {isAnalyzing ? 'Auditing...' : 'Run Deep Audit'}
-                        </button>
-                    </div>
-
-                    {analysis && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
-                            <div className="bg-white dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audit Summary</h4>
-                                <p className={`text-sm font-bold leading-relaxed ${analysis.score >= 80 ? 'text-green-600' : (analysis.score >= 60 ? 'text-amber-500' : 'text-red-500')}`}>{analysis.summary}</p>
-                                <div className="mt-4 flex items-baseline gap-1">
-                                    <div className="text-4xl font-black text-slate-900 dark:text-white">{analysis.score}</div>
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase">/ 100</div>
-                                </div>
-                                <p className="text-[10px] text-slate-400 mt-2 italic">Strict evaluation based on provided skills and experience.</p>
-                            </div>
-                            <div className="bg-red-50 dark:bg-red-900/10 p-5 rounded-xl border border-red-100 dark:border-red-900/30">
-                                <h4 className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-3">Critical Gaps & Missing Keywords</h4>
-                                <div className="space-y-3">
-                                    {analysis.missingKeywords.map((k, i) => (
-                                        <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-red-100 dark:border-red-900/20 shadow-sm hover:shadow-md transition-all group">
-                                            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                                                <span className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-2">
-                                                    {k.keyword}
-                                                </span>
-                                                {k.context && (
-                                                    <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-200 dark:border-slate-700">
-                                                        {k.context}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            
-                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                                                {k.reason}
-                                            </p>
-                                            
-                                            <div className="relative bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                                                <div className="absolute top-3 left-3 text-blue-500">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                                                    </svg>
-                                                </div>
-                                                <div className="pl-5">
-                                                    <span className="font-bold text-blue-700 dark:text-blue-300 block mb-0.5 uppercase text-[8px] tracking-widest">Optimization Strategy</span>
-                                                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 italic">"{k.integrationTip}"</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                {/* 3. ATS Strategy Lab (Moved to Elite Suite) */}
+                {/* Removed from here */}
 
                 {/* 4. Elite Suite (Footer) */}
                 <div className="p-6 bg-slate-900 rounded-2xl text-white relative overflow-hidden shadow-lg mt-2">
@@ -668,7 +607,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                             <p className="text-slate-400 text-xs font-medium">Unlock recruiter insights & negotiation scripts.</p>
                         </div>
                         {!isPro ? (
-                            <button onClick={handlePayment} className="px-6 py-2.5 bg-amber-500 text-slate-900 text-xs font-black rounded-xl hover:bg-amber-400 transition-all whitespace-nowrap">Unlock (₹29)</button>
+                            <button onClick={handlePayment} className="px-6 py-2.5 bg-amber-500 text-slate-900 text-xs font-black rounded-xl hover:bg-amber-400 transition-all whitespace-nowrap">Unlock (₹25)</button>
                         ) : (
                             <div className="flex flex-col items-end">
                                 <div className="px-4 py-1.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/50 flex items-center gap-2"><CheckIcon className="w-3 h-3"/> Active</div>
@@ -845,8 +784,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                     <div className="max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4">
                         <div className="text-5xl mb-4">🔒</div>
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white">Elite Strategy Suite</h2>
-                        <p className="text-slate-500 text-sm">Unlock recruiter psychology insights, salary negotiation scripts, and custom networking strategies used by top 1% candidates.</p>
-                        <button onClick={handlePayment} className="px-8 py-3 bg-blue-600 text-white font-black text-sm rounded-xl shadow-lg hover:scale-105 transition-all">Unlock Full System (₹29)</button>
+                        <p className="text-slate-500 text-sm">Unlock recruiter psychology insights, salary negotiation scripts, cold email templates, and custom networking strategies used by top 1% candidates.</p>
+                        <button onClick={handlePayment} className="px-8 py-3 bg-blue-600 text-white font-black text-sm rounded-xl shadow-lg hover:scale-105 transition-all">Unlock Full System (₹25)</button>
                     </div>
                 ) : (
                     <div className="text-left space-y-8 animate-in fade-in">
@@ -866,14 +805,78 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="p-8 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
                                     <h4 className="font-black text-blue-600 text-[10px] uppercase mb-4 tracking-widest">Recruiter Psychology</h4>
-                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm font-medium">{toolkit.recruiterPsychology}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm font-medium whitespace-pre-wrap">{toolkit.recruiterPsychology}</p>
                                 </div>
                                 <div className="p-8 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
                                     <h4 className="font-black text-blue-600 text-[10px] uppercase mb-4 tracking-widest">Salary Script</h4>
-                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm font-medium">{toolkit.salaryNegotiation}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm font-medium whitespace-pre-wrap">{toolkit.salaryNegotiation}</p>
                                 </div>
                             </div>
                         )}
+
+                        {/* ATS Strategy Lab (Moved Here) */}
+                        <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden mt-8">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <SearchIcon className="w-5 h-5 text-blue-600" /> ATS Neural Scan & Deep Audit
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-medium mt-1">Professional-grade analysis against target role requirements.</p>
+                                </div>
+                                <button onClick={runAnalysis} disabled={isAnalyzing} className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
+                                    {isAnalyzing ? 'Auditing...' : 'Run Deep Audit'}
+                                </button>
+                            </div>
+
+                            {analysis && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in text-left">
+                                    <div className="bg-white dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audit Summary</h4>
+                                        <p className={`text-sm font-bold leading-relaxed ${analysis.score >= 80 ? 'text-green-600' : (analysis.score >= 60 ? 'text-amber-500' : 'text-red-500')}`}>{analysis.summary}</p>
+                                        <div className="mt-4 flex items-baseline gap-1">
+                                            <div className="text-4xl font-black text-slate-900 dark:text-white">{analysis.score}</div>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase">/ 100</div>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 mt-2 italic">Strict evaluation based on provided skills and experience.</p>
+                                    </div>
+                                    <div className="bg-red-50 dark:bg-red-900/10 p-5 rounded-xl border border-red-100 dark:border-red-900/30">
+                                        <h4 className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-3">Critical Gaps & Missing Keywords</h4>
+                                        <div className="space-y-3">
+                                            {analysis.missingKeywords.map((k, i) => (
+                                                <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-red-100 dark:border-red-900/20 shadow-sm hover:shadow-md transition-all group">
+                                                    <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+                                                        <span className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-2">
+                                                            {k.keyword}
+                                                        </span>
+                                                        {k.context && (
+                                                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-200 dark:border-slate-700">
+                                                                {k.context}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+                                                        {k.reason}
+                                                    </p>
+                                                    
+                                                    <div className="relative bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                                        <div className="absolute top-3 left-3 text-blue-500">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                                                            </svg>
+                                                        </div>
+                                                        <div className="pl-5">
+                                                            <span className="font-bold text-blue-700 dark:text-blue-300 block mb-0.5 uppercase text-[8px] tracking-widest">Optimization Strategy</span>
+                                                            <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 italic">"{k.integrationTip}"</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

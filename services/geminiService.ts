@@ -84,8 +84,8 @@ export const generateJobToolkit = async (input: UserInput): Promise<JobToolkit> 
       "resume": "Full professional resume text formatted with sections (Summary, Experience, Education, Skills, Projects). Use plain text with clear headings.",
       "coverLetter": "Full professional cover letter text.",
       "linkedin": {
-        "headlines": ["Headline Option 1", "Headline Option 2", "Headline Option 3"],
-        "bio": "Engaging professional bio for LinkedIn."
+        "headlines": ["Headline Option 1 (Punchy & Impactful)", "Headline Option 2 (Keyword Rich)", "Headline Option 3 (Value Proposition)"],
+        "bio": "A long, compelling, and professional LinkedIn About section (approx. 200-300 words). It should tell a story, highlight key achievements, use industry keywords, and have a strong call to action. Make it 'heavy' with value but easy to read."
       },
       "mockInterview": {
         "questions": [
