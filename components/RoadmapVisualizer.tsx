@@ -6,9 +6,10 @@ import { DownloadIcon } from './icons/DownloadIcon';
 
 interface RoadmapVisualizerProps {
   steps: RoadmapStep[];
+  isPro?: boolean;
 }
 
-export const RoadmapVisualizer: React.FC<RoadmapVisualizerProps> = ({ steps }) => {
+export const RoadmapVisualizer: React.FC<RoadmapVisualizerProps> = ({ steps, isPro = false }) => {
   const [expandedSteps, setExpandedSteps] = useState<number[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -181,16 +182,17 @@ export const RoadmapVisualizer: React.FC<RoadmapVisualizerProps> = ({ steps }) =
                                     <div className="flex flex-wrap gap-2">
                                         {step.resources.map((res, i) => {
                                             const isPremium = res.type === 'Premium';
+                                            const isLocked = isPremium && !isPro;
                                             const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(res.title)}`;
                                             
                                             return (
                                                 <a 
                                                     key={i} 
-                                                    href={isPremium ? undefined : searchUrl}
-                                                    target={isPremium ? undefined : '_blank'}
-                                                    rel={isPremium ? undefined : "noopener noreferrer"}
+                                                    href={isLocked ? undefined : searchUrl}
+                                                    target={isLocked ? undefined : '_blank'}
+                                                    rel={isLocked ? undefined : "noopener noreferrer"}
                                                     onClick={(e) => {
-                                                        if (isPremium) {
+                                                        if (isLocked) {
                                                             e.preventDefault();
                                                             e.stopPropagation(); // Stop propagation to prevent collapsing card
                                                             // Custom Interactive Alert
@@ -237,13 +239,15 @@ export const RoadmapVisualizer: React.FC<RoadmapVisualizerProps> = ({ steps }) =
                                                     }}
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 ${
                                                         isPremium 
-                                                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer border border-amber-200 dark:border-amber-800/50 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5' 
+                                                        ? (isLocked 
+                                                            ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer border border-amber-200 dark:border-amber-800/50 hover:shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5'
+                                                            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/50 hover:shadow-sm hover:-translate-y-0.5')
                                                         : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 hover:shadow-sm hover:-translate-y-0.5'
                                                     }`}
                                                 >
-                                                    <span>{isPremium ? '💎' : (res.type === 'Tool' ? '🛠️' : '📚')}</span> 
+                                                    <span>{isPremium ? (isLocked ? '💎' : '🔓') : (res.type === 'Tool' ? '🛠️' : '📚')}</span> 
                                                     <span className={isPremium ? 'underline decoration-amber-300/50 underline-offset-2' : 'hover:underline'}>{res.title}</span>
-                                                    {isPremium && <span className="ml-1 text-[8px] bg-gradient-to-r from-amber-500 to-orange-500 text-white px-1.5 py-0.5 rounded-full font-black tracking-wider shadow-sm">PRO</span>}
+                                                    {isPremium && <span className={`ml-1 text-[8px] px-1.5 py-0.5 rounded-full font-black tracking-wider shadow-sm ${isLocked ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}`}>{isLocked ? 'PRO' : 'OPEN'}</span>}
                                                 </a>
                                             );
                                         })}

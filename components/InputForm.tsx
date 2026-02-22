@@ -756,7 +756,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
                   
                   <TextareaField id="whyThisRole" label="Motivation & Culture Fit *" placeholder="Why this specific company and role?" value={formData.whyThisRole} onChange={handleChange} rows={3} required helpText="This helps us tailor behavioral interview questions." />
                   <div className="mt-6">
-                    <InputField id="interests" label="Cultural Interests" placeholder="e.g., AI, Gaming, Hiking" value={formData.interests} onChange={handleChange} required />
+                    <TagInput 
+                        id="interests" 
+                        label="Cultural Interests *" 
+                        placeholder="Type interest & hit Enter (e.g. AI, Gaming)" 
+                        value={formData.interests} 
+                        onChange={handleChange} 
+                        helpText="Hobbies and interests help with culture fit questions."
+                    />
                   </div>
               </div>
           )}

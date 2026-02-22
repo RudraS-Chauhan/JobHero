@@ -31,13 +31,13 @@ interface ResultsDisplayProps {
 
 type Tab = 'resume' | 'coverLetter' | 'linkedin' | 'interview' | 'roadmap' | 'elite';
 
-const tabs: { id: Tab; name: string; icon: any }[] = [
-  { id: 'resume', name: 'Resume', icon: ResumeIcon },
-  { id: 'coverLetter', name: 'Cover Letter', icon: CoverLetterIcon },
-  { id: 'linkedin', name: 'LinkedIn', icon: LinkedInIcon },
-  { id: 'interview', name: 'Interview', icon: InterviewIcon },
-  { id: 'roadmap', name: 'Strategy', icon: RoadmapIcon },
-  { id: 'elite', name: 'Elite Suite', icon: () => <span className="text-lg">⚡</span> },
+const tabs: { id: Tab; name: string; icon: any; tooltip: string }[] = [
+  { id: 'resume', name: 'Resume', icon: ResumeIcon, tooltip: "View and customize your AI-generated resume" },
+  { id: 'coverLetter', name: 'Cover Letter', icon: CoverLetterIcon, tooltip: "Get a tailored cover letter for your target role" },
+  { id: 'linkedin', name: 'LinkedIn', icon: LinkedInIcon, tooltip: "Optimize your LinkedIn profile and headlines" },
+  { id: 'interview', name: 'Interview', icon: InterviewIcon, tooltip: "Practice with AI-generated interview questions" },
+  { id: 'roadmap', name: 'Strategy', icon: RoadmapIcon, tooltip: "View your personalized career roadmap" },
+  { id: 'elite', name: 'Elite Suite', icon: () => <span className="text-lg">⚡</span>, tooltip: "Unlock premium career tools and insights" },
 ];
 
 const ChevronDownIcon = ({ className }: { className?: string }) => (
@@ -185,6 +185,21 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
     return (
         <button onClick={handleCopy} className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors group" title="Copy to clipboard">
             {copied ? <CheckIcon className="w-4 h-4 text-green-500" /> : <CopyIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />}
+        </button>
+    );
+};
+
+const LabeledCopyButton: React.FC<{ text: string, label: string }> = ({ text, label }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = () => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+    return (
+        <button onClick={handleCopy} className="flex items-center gap-1.5 px-4 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+            {copied ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <CopyIcon className="w-3.5 h-3.5" />}
+            {copied ? 'Copied!' : label}
         </button>
     );
 };
@@ -562,6 +577,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
+            title={tab.tooltip}
             className={`flex items-center justify-center flex-1 min-w-0 gap-1.5 px-1.5 py-2 rounded-lg text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap overflow-hidden ${
               activeTab === tab.id 
               ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow' 
@@ -623,43 +639,71 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                             </h3>
                             <p className="text-xs text-slate-500 font-medium mt-1">Professional-grade analysis against target role requirements.</p>
                         </div>
-                        <button onClick={runAnalysis} disabled={isAnalyzing} className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
-                            {isAnalyzing ? 'Auditing...' : 'Run Deep Audit'}
+                        <button onClick={isPro ? runAnalysis : handlePayment} disabled={isAnalyzing} className={`px-5 py-2.5 ${isPro ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-amber-500 text-slate-900'} text-xs font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg`}>
+                            {!isPro && <span className="text-sm">🔒</span>}
+                            {isAnalyzing ? 'Auditing...' : (isPro ? 'Run Deep Audit' : 'Unlock Audit (Pro)')}
                         </button>
                     </div>
 
                     {analysis && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in text-left">
-                            <div className="bg-white dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audit Summary</h4>
-                                <p className={`text-sm font-bold leading-relaxed ${analysis.score >= 80 ? 'text-green-600' : (analysis.score >= 60 ? 'text-amber-500' : 'text-red-500')}`}>{analysis.summary}</p>
-                                <div className="mt-4 flex items-baseline gap-1">
-                                    <div className="text-4xl font-black text-slate-900 dark:text-white">{analysis.score}</div>
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase">/ 100</div>
+                        <div className="space-y-6 animate-in fade-in text-left">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audit Summary</h4>
+                                    <p className={`text-sm font-bold leading-relaxed ${analysis.score >= 80 ? 'text-green-600' : (analysis.score >= 60 ? 'text-amber-500' : 'text-red-500')}`}>{analysis.summary}</p>
+                                    <div className="mt-4 flex items-baseline gap-1">
+                                        <div className="text-4xl font-black text-slate-900 dark:text-white">{analysis.score}</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase">/ 100</div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic">Strict evaluation based on provided skills and experience.</p>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2 italic">Strict evaluation based on provided skills and experience.</p>
-                            </div>
-                            <div className="bg-red-50 dark:bg-red-900/10 p-5 rounded-xl border border-red-100 dark:border-red-900/30">
-                                <h4 className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-3">Critical Gaps & Missing Keywords</h4>
-                                <div className="space-y-3">
-                                    {analysis.missingKeywords.map((k, i) => (
-                                        <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-red-100 dark:border-red-900/20 shadow-sm hover:shadow-md transition-all group">
-                                            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                                                <span className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-2">
-                                                    {k.keyword}
-                                                </span>
-                                                {k.context && (
-                                                    <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-200 dark:border-slate-700">
-                                                        {k.context}
+                                <div className="bg-red-50 dark:bg-red-900/10 p-5 rounded-xl border border-red-100 dark:border-red-900/30">
+                                    <h4 className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-3">Critical Gaps & Missing Keywords</h4>
+                                    <div className="space-y-3">
+                                        {analysis.missingKeywords.map((k, i) => (
+                                            <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-red-100 dark:border-red-900/20 shadow-sm hover:shadow-md transition-all group">
+                                                <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+                                                    <span className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-2">
+                                                        {k.keyword}
                                                     </span>
-                                                )}
+                                                    {k.context && (
+                                                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-200 dark:border-slate-700">
+                                                            {k.context}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                
+                                                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+                                                    {k.reason}
+                                                </p>
                                             </div>
-                                            
-                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                                                {k.reason}
-                                            </p>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-xl border border-green-100 dark:border-green-900/30">
+                                    <h4 className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-3">Key Strengths</h4>
+                                    <ul className="space-y-2">
+                                        {analysis.strengths.map((s, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-[10px] text-slate-700 dark:text-slate-300">
+                                                <CheckIcon className="w-3 h-3 text-green-500 mt-0.5 shrink-0" />
+                                                <span>{s}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                                    <h4 className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-3">Strategic Improvements</h4>
+                                    <ul className="space-y-2">
+                                        {analysis.improvements.map((s, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-[10px] text-slate-700 dark:text-slate-300">
+                                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0" />
+                                                <span>{s}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -692,9 +736,12 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
             <div className="animate-in fade-in space-y-6">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-black">Cover Letter</h3>
-                    <button onClick={() => downloadPDF('cover-letter-preview', 'cover_letter.pdf')} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-                        <DownloadIcon className="w-3.5 h-3.5" /> Download Cover Letter as PDF
-                    </button>
+                    <div className="flex gap-2">
+                        <LabeledCopyButton text={toolkit.coverLetter || ""} label="Copy Text" />
+                        <button onClick={() => downloadPDF('cover-letter-preview', 'cover_letter.pdf')} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
+                            <DownloadIcon className="w-3.5 h-3.5" /> Download Cover Letter as PDF
+                        </button>
+                    </div>
                 </div>
                 <div id="cover-letter-preview" className="w-full h-[600px] p-8 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-serif leading-7 text-slate-700 dark:text-slate-300 shadow-inner overflow-auto whitespace-pre-wrap">
                     {toolkit.coverLetter || "Generating cover letter..."}
@@ -903,7 +950,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ toolkit, userInput, onR
                 </div>
 
                 {toolkit.careerRoadmap && toolkit.careerRoadmap.length > 0 ? (
-                    <RoadmapVisualizer steps={toolkit.careerRoadmap} />
+                    <RoadmapVisualizer steps={toolkit.careerRoadmap} isPro={isPro} />
                 ) : <p className="text-center text-slate-500 text-sm">No roadmap generated.</p>}
 
                 {/* Elite Suite Footer for Roadmap */}
